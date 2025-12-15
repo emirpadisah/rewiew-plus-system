@@ -21,7 +21,7 @@ export default function SendMessagePage() {
   const [selectedCustomers, setSelectedCustomers] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
-  const [settings, setSettings] = useState<{ review_platform: string; review_url: string | null } | null>(null)
+  const [settings, setSettings] = useState<{ review_platform: string; review_url: string | null; message_template: string | null } | null>(null)
 
   useEffect(() => {
     fetchCustomers()
