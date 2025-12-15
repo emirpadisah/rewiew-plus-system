@@ -4,10 +4,29 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 
 export function BusinessNav() {
   const pathname = usePathname()
   const router = useRouter()
+  const [businessName, setBusinessName] = useState<string>('İşletme Panel')
+
+  useEffect(() => {
+    const fetchBusinessName = async () => {
+      try {
+        const response = await fetch('/api/business/info')
+        if (response.ok) {
+          const data = await response.json()
+          if (data.name) {
+            setBusinessName(data.name)
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching business name:', error)
+      }
+    }
+    fetchBusinessName()
+  }, [])
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' })
@@ -19,7 +38,7 @@ export function BusinessNav() {
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
         <div className="flex items-center space-x-6">
           <Link href="/business" className="text-xl font-bold">
-            İşletme Panel
+            {businessName}
           </Link>
           <div className="flex space-x-4">
             <Link
