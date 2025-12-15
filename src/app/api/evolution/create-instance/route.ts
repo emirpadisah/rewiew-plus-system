@@ -37,23 +37,43 @@ export async function POST(request: Request) {
     // Evolution API v2: QR code might not be in create response
     // Need to fetch it separately via connect endpoint
     let qrcode = null
-    try {
-      // Try to get QR code immediately after creation
-      await new Promise(resolve => setTimeout(resolve, 500)) // Small delay for instance to be ready
-      const qrResponse = await getQrCode(instanceName)
-      if (qrResponse) {
-        qrcode = qrResponse.qrcode || qrResponse.qrCode || {
-          base64: qrResponse.base64,
-          code: qrResponse.code,
-        }
-      }
-    } catch (error) {
-      // QR code will be fetched later via frontend polling
-    }
-
-    // If QR code in create response, use it
-    if (!qrcode && instance.qrcode) {
+    
+    // Check if QR code is in create response first
+    if (instance.qrcode) {
       qrcode = instance.qrcode
+    } else if (instance.base64) {
+      qrcode = {
+        base64: instance.base64.startsWith('data:') ? instance.base64 : `data:image/png;base64,${instance.base64}`,
+        code: instance.code,
+      }
+    }
+    
+    // If not in create response, try to fetch it
+    if (!qrcode) {
+      try {
+        // Wait a bit longer for instance to be ready in production
+        await new Promise(resolve => setTimeout(resolve, 2000))
+        const qrResponse = await getQrCode(instanceName)
+        
+        if (qrResponse) {
+          if (qrResponse.qrcode) {
+            qrcode = qrResponse.qrcode
+          } else if (qrResponse.base64) {
+            qrcode = {
+              base64: qrResponse.base64.startsWith('data:') ? qrResponse.base64 : `data:image/png;base64,${qrResponse.base64}`,
+              code: qrResponse.code,
+            }
+          } else if (qrResponse.code) {
+            qrcode = {
+              code: qrResponse.code,
+              base64: qrResponse.base64,
+            }
+          }
+        }
+      } catch (error: any) {
+        // QR code will be fetched later via frontend polling
+        console.error('QR code not available immediately, will be fetched via polling:', error.message)
+      }
     }
 
     return NextResponse.json({ 

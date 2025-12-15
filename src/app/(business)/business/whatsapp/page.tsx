@@ -21,14 +21,17 @@ export default function WhatsAppPage() {
 
   useEffect(() => {
     fetchStatus()
-    // Poll status every 5 seconds if pending
-    const interval = setInterval(() => {
-      if (status?.status === 'pending') {
+  }, [])
+
+  useEffect(() => {
+    // Poll status and QR code every 3 seconds if pending
+    if (status?.status === 'pending') {
+      const interval = setInterval(() => {
         fetchStatus()
         fetchQrCode()
-      }
-    }, 5000)
-    return () => clearInterval(interval)
+      }, 3000)
+      return () => clearInterval(interval)
+    }
   }, [status?.status])
 
   const fetchStatus = async () => {
@@ -51,21 +54,48 @@ export default function WhatsAppPage() {
   const fetchQrCode = async () => {
     try {
       const response = await fetch('/api/evolution/qrcode')
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+        console.error('QR code fetch failed:', errorData)
+        return
+      }
+      
       const data = await response.json()
       
-      // Evolution API v2 response format
-      // base64 already includes 'data:image/png;base64,' prefix, so use it directly
+      // Handle various QR code response formats
+      if (data.error) {
+        console.error('QR code error:', data.error)
+        return
+      }
       
+      // Check for base64 (image format)
       if (data.base64) {
-        setQrCode(data.base64)
-      } else if (data.qrcode?.base64) {
-        const qrData = data.qrcode.base64.startsWith('data:') ? data.qrcode.base64 : `data:image/png;base64,${data.qrcode.base64}`
+        const qrData = data.base64.startsWith('data:') 
+          ? data.base64 
+          : `data:image/png;base64,${data.base64}`
         setQrCode(qrData)
-      } else if (data.code) {
+      } 
+      // Check for nested qrcode object
+      else if (data.qrcode?.base64) {
+        const qrData = data.qrcode.base64.startsWith('data:') 
+          ? data.qrcode.base64 
+          : `data:image/png;base64,${data.qrcode.base64}`
+        setQrCode(qrData)
+      } 
+      // Check for code (text format)
+      else if (data.code) {
         setQrCode(data.code)
       }
-    } catch (error) {
-      console.error('Error fetching QR code:', error)
+      // Check for nested code
+      else if (data.qrcode?.code) {
+        setQrCode(data.qrcode.code)
+      }
+      else {
+        console.warn('QR code data format not recognized:', data)
+      }
+    } catch (error: any) {
+      console.error('Error fetching QR code:', error.message || error)
     }
   }
 
@@ -120,19 +150,30 @@ export default function WhatsAppPage() {
       // Set QR code from response if available
       if (data.qrcode) {
         if (data.qrcode.base64) {
-          setQrCode(`data:image/png;base64,${data.qrcode.base64}`)
+          const qrData = data.qrcode.base64.startsWith('data:') 
+            ? data.qrcode.base64 
+            : `data:image/png;base64,${data.qrcode.base64}`
+          setQrCode(qrData)
         } else if (data.qrcode.code) {
           setQrCode(data.qrcode.code)
         }
+      } else if (data.base64) {
+        const qrData = data.base64.startsWith('data:') 
+          ? data.base64 
+          : `data:image/png;base64,${data.base64}`
+        setQrCode(qrData)
+      } else if (data.code) {
+        setQrCode(data.code)
       }
 
       // Fetch status and QR code
       setTimeout(() => {
         fetchStatus()
-        if (!data.qrcode) {
+        // Always try to fetch QR code if not in response
+        if (!data.qrcode && !data.base64 && !data.code) {
           fetchQrCode()
         }
-      }, 1000)
+      }, 2000) // Increased delay for production
     } catch (error: any) {
       toast({
         title: 'Hata',
