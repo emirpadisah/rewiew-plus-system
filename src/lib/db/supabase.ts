@@ -7,8 +7,9 @@ function getSupabaseClient(): SupabaseClient {
     return supabaseClient
   }
 
-  const supabaseUrl = process.env.SUPABASE_URL
-  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY
+  // Support both SUPABASE_URL and NEXT_PUBLIC_SUPABASE_URL for compatibility
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   // During build time (especially on Vercel), env vars might not be available
   // Create a placeholder client that will fail gracefully at runtime
