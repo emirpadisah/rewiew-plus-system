@@ -119,7 +119,7 @@ export async function POST(request: Request) {
                 .replace(/{reviewUrl}/g, settings?.review_url || '')
 
               await sendTextMessage(
-                connection.instance_name,
+                connection!.instance_name,
                 customerPhone,
                 message
               )
