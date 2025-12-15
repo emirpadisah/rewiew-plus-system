@@ -111,12 +111,12 @@ export async function POST(request: Request) {
               const firstName = customerName.split(' ')[0]
               
               // Get message template or use default
-              const template = settings.message_template || 'Merhaba {firstName}, bizimle deneyiminizi değerlendirmek ister misiniz? {reviewUrl}'
+              const template = settings?.message_template || 'Merhaba {firstName}, bizimle deneyiminizi değerlendirmek ister misiniz? {reviewUrl}'
               
               // Replace placeholders
               const message = template
                 .replace(/{firstName}/g, firstName)
-                .replace(/{reviewUrl}/g, settings.review_url || '')
+                .replace(/{reviewUrl}/g, settings?.review_url || '')
 
               await sendTextMessage(
                 connection.instance_name,
