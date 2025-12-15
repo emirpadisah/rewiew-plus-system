@@ -195,10 +195,10 @@ export default function CustomersPage() {
             setCreating(false)
           }
         },
-        error: (error) => {
+        error: (error: any) => {
           toast({
             title: 'Hata',
-            description: `CSV parse hatası: ${error.message}`,
+            description: `CSV parse hatası: ${error.message || 'Bilinmeyen hata'}`,
             variant: 'destructive',
           })
           setCreating(false)
