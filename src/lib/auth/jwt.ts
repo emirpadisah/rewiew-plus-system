@@ -8,7 +8,7 @@ const secret = new TextEncoder().encode(
 const JWT_COOKIE_NAME = 'auth-token'
 
 export async function encodeJWT(payload: JWTPayload): Promise<string> {
-  const jwt = await new SignJWT(payload)
+  const jwt = await new SignJWT(payload as any)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('7d')
@@ -19,7 +19,7 @@ export async function encodeJWT(payload: JWTPayload): Promise<string> {
 
 export async function decodeJWT(token: string): Promise<JWTPayload> {
   const { payload } = await jwtVerify(token, secret)
-  return payload as JWTPayload
+  return payload as unknown as JWTPayload
 }
 
 export { JWT_COOKIE_NAME }

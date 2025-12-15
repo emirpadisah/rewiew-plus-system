@@ -75,6 +75,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No customers found' }, { status: 400 })
     }
 
+    // Store values in local constants to avoid TypeScript null check issues in closures
+    const businessId = user.businessId
+    const instanceName = connection.instance_name
+    const messageTemplate = settings.message_template || 'Merhaba {firstName}, bizimle deneyiminizi değerlendirmek ister misiniz? {reviewUrl}'
+    const reviewUrl = settings.review_url || ''
+
     // Send messages with rate limiting
     const results: Array<{ customerId: string; success: boolean; error?: string }> = []
     const queue = [...customers]
@@ -110,22 +116,19 @@ export async function POST(request: Request) {
               // Build personalized message using template
               const firstName = customerName.split(' ')[0]
               
-              // Get message template or use default
-              const template = settings?.message_template || 'Merhaba {firstName}, bizimle deneyiminizi değerlendirmek ister misiniz? {reviewUrl}'
-              
               // Replace placeholders
-              const message = template
+              const message = messageTemplate
                 .replace(/{firstName}/g, firstName)
-                .replace(/{reviewUrl}/g, settings?.review_url || '')
+                .replace(/{reviewUrl}/g, reviewUrl)
 
               await sendTextMessage(
-                connection!.instance_name,
+                instanceName,
                 customerPhone,
                 message
               )
 
               await createMessageLog({
-                business_id: user.businessId!,
+                business_id: businessId,
                 customer_id: customerId,
                 status: 'sent',
               })
@@ -139,7 +142,7 @@ export async function POST(request: Request) {
               console.error(`Error sending message to ${customerName}:`, errorMessage)
 
               await createMessageLog({
-                business_id: user.businessId!,
+                business_id: businessId,
                 customer_id: customerId,
                 status: 'failed',
                 error_message: errorMessage,

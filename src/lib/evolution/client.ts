@@ -14,9 +14,9 @@ async function evolutionRequest<T>(
 ): Promise<T> {
   const url = `${EVOLUTION_API_URL}${endpoint}`
   
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...options.headers,
+    ...(options.headers as Record<string, string>),
   }
 
   // Evolution API v2 uses apikey header (not Authorization)
