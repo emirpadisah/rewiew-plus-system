@@ -8,7 +8,23 @@ import { z } from 'zod'
 
 const updateSettingsSchema = z.object({
   review_platform: z.enum(['google', 'tripadvisor', 'custom']).optional(),
-  review_url: z.string().url().optional(),
+  review_url: z
+    .string()
+    .nullable()
+    .optional()
+    .refine(
+      (val) => {
+        if (!val || val.trim() === '') return true // Allow empty string
+        try {
+          new URL(val.trim())
+          return true
+        } catch {
+          return false
+        }
+      },
+      { message: 'Geçerli bir URL girin' }
+    )
+    .transform((val) => (val && val.trim() ? val.trim() : null)),
   message_template: z.string().nullable().optional(),
 })
 

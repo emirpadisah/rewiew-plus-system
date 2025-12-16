@@ -45,6 +45,18 @@ export default function SettingsPage() {
       return
     }
 
+    // Validate URL format
+    try {
+      new URL(reviewUrl.trim())
+    } catch {
+      toast({
+        title: 'Hata',
+        description: 'Geçerli bir URL girin (örn: https://g.page/r/...)',
+        variant: 'destructive',
+      })
+      return
+    }
+
     setSaving(true)
     try {
       const response = await fetch('/api/business/settings', {
@@ -52,8 +64,8 @@ export default function SettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           review_platform: 'custom',
-          review_url: reviewUrl.trim(),
-          message_template: messageTemplate || null,
+          review_url: reviewUrl.trim() || null,
+          message_template: messageTemplate.trim() || null,
         }),
       })
 
