@@ -14,6 +14,15 @@ import {
 } from '@/components/ui/table'
 import { useToast } from '@/hooks/use-toast'
 import { Customer } from '@/types'
+import { 
+  Send, 
+  Users, 
+  MessageSquare, 
+  CheckCircle2,
+  Loader2,
+  AlertCircle,
+  Eye
+} from 'lucide-react'
 
 export default function SendMessagePage() {
   const { toast } = useToast()
@@ -110,9 +119,7 @@ export default function SendMessagePage() {
       }
 
       if (data.failed > 0 && data.results) {
-        // Show detailed error messages for failed messages
         const failedResults = data.results.filter((r: any) => !r.success)
-        
         toast({
           title: data.sent > 0 ? 'Kısmen Başarılı' : 'Hata',
           description: `${data.sent} mesaj gönderildi, ${data.failed} mesaj başarısız. ${failedResults.length > 0 ? `Hata: ${failedResults[0].error}` : ''}`,
@@ -141,47 +148,66 @@ export default function SendMessagePage() {
   const previewMessage = (customerName: string) => {
     const firstName = customerName.split(' ')[0]
     const reviewUrl = settings?.review_url || 'https://example.com/review'
-    
-    // Get message template or use default
     const template = settings?.message_template || 'Merhaba {firstName}, bizimle deneyiminizi değerlendirmek ister misiniz? {reviewUrl}'
-    
-    // Replace placeholders
     return template
       .replace(/{firstName}/g, firstName)
       .replace(/{reviewUrl}/g, reviewUrl)
   }
 
   if (loading) {
-    return <div>Yükleniyor...</div>
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex flex-col items-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Yükleniyor...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold mb-8">Mesaj Gönder</h1>
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Mesaj Gönder</h1>
+        <p className="text-muted-foreground mt-1">
+          Müşterilerinize review linki gönderin
+        </p>
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
+        {/* Customers List */}
         <div className="lg:col-span-2">
           <Card>
             <CardHeader>
-              <div className="flex justify-between items-center">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                  <CardTitle>Müşteriler</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    Müşteriler
+                  </CardTitle>
                   <CardDescription>
                     Mesaj göndermek için müşterileri seçin
                   </CardDescription>
                 </div>
-                <Button variant="outline" onClick={handleSelectAll}>
+                <Button variant="outline" onClick={handleSelectAll} className="gap-2">
                   {selectedCustomers.size === customers.length ? 'Tümünü Kaldır' : 'Tümünü Seç'}
                 </Button>
               </div>
             </CardHeader>
             <CardContent>
               {customers.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  Müşteri bulunamadı
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <Users className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                    Henüz müşteri eklenmedi
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Önce müşteriler sayfasından müşteri ekleyin
+                  </p>
                 </div>
               ) : (
-                <div className="border rounded-lg">
+                <div className="rounded-md border">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -192,22 +218,25 @@ export default function SendMessagePage() {
                           />
                         </TableHead>
                         <TableHead>İsim</TableHead>
-                        <TableHead>Telefon</TableHead>
+                        <TableHead className="hidden sm:table-cell">Telefon</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {customers.map((customer) => (
-                        <TableRow key={customer.id}>
+                        <TableRow 
+                          key={customer.id}
+                          className={selectedCustomers.has(customer.id) ? 'bg-muted/50' : ''}
+                        >
                           <TableCell>
                             <Checkbox
                               checked={selectedCustomers.has(customer.id)}
                               onCheckedChange={() => handleToggleCustomer(customer.id)}
                             />
                           </TableCell>
-                          <TableCell className="font-medium">
-                            {customer.name}
+                          <TableCell className="font-medium">{customer.name}</TableCell>
+                          <TableCell className="hidden sm:table-cell font-mono text-sm">
+                            {customer.phone}
                           </TableCell>
-                          <TableCell>{customer.phone}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -218,10 +247,14 @@ export default function SendMessagePage() {
           </Card>
         </div>
 
+        {/* Preview & Send */}
         <div>
-          <Card>
+          <Card className="sticky top-20">
             <CardHeader>
-              <CardTitle>Mesaj Önizleme</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Eye className="h-5 w-5" />
+                Mesaj Önizleme
+              </CardTitle>
               <CardDescription>
                 Gönderilecek mesaj örneği
               </CardDescription>
@@ -229,25 +262,63 @@ export default function SendMessagePage() {
             <CardContent className="space-y-4">
               {selectedCustomers.size > 0 ? (
                 <>
-                  <div className="p-4 bg-muted rounded-lg text-sm">
-                    {previewMessage(
-                      customers.find((c) => selectedCustomers.has(c.id))?.name || 'Müşteri'
-                    )}
+                  <div className="p-4 rounded-lg bg-muted border-2 border-dashed">
+                    <p className="text-xs text-muted-foreground mb-2 font-medium">Örnek Mesaj:</p>
+                    <p className="text-sm whitespace-pre-wrap">
+                      {previewMessage(
+                        customers.find((c) => selectedCustomers.has(c.id))?.name || 'Müşteri'
+                      )}
+                    </p>
                   </div>
-                  <div className="text-sm text-muted-foreground">
-                    {selectedCustomers.size} müşteri seçildi
+                  
+                  {!settings?.review_url && (
+                    <div className="p-3 rounded-lg bg-yellow-50 border border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5" />
+                        <div className="text-xs text-yellow-800 dark:text-yellow-200">
+                          Review URL ayarlanmamış. Lütfen ayarlar sayfasından yapılandırın.
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="p-3 rounded-lg bg-blue-50 border border-blue-200 dark:bg-blue-900/20 dark:border-blue-800">
+                    <div className="flex items-center gap-2 text-sm">
+                      <MessageSquare className="h-4 w-4 text-blue-600" />
+                      <span className="font-medium text-blue-900 dark:text-blue-100">
+                        {selectedCustomers.size} müşteri seçildi
+                      </span>
+                    </div>
                   </div>
+
                   <Button
                     onClick={handleSend}
-                    disabled={sending || selectedCustomers.size === 0}
-                    className="w-full"
+                    disabled={sending || selectedCustomers.size === 0 || !settings?.review_url}
+                    className="w-full gap-2"
+                    size="lg"
                   >
-                    {sending ? 'Gönderiliyor...' : 'Mesaj Gönder'}
+                    {sending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Gönderiliyor...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-4 w-4" />
+                        Mesaj Gönder ({selectedCustomers.size})
+                      </>
+                    )}
                   </Button>
                 </>
               ) : (
-                <div className="text-sm text-muted-foreground text-center py-8">
-                  Mesaj önizlemesi için müşteri seçin
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <MessageSquare className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                    Müşteri seçin
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Mesaj önizlemesi için müşteri seçin
+                  </p>
                 </div>
               )}
             </CardContent>
@@ -257,4 +328,3 @@ export default function SendMessagePage() {
     </div>
   )
 }
-

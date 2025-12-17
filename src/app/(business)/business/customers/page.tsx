@@ -21,9 +21,21 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { Customer } from '@/types'
 import Papa from 'papaparse'
+import { 
+  Users, 
+  Plus, 
+  Upload, 
+  Search, 
+  ChevronLeft, 
+  ChevronRight,
+  Loader2,
+  UserPlus,
+  FileUp
+} from 'lucide-react'
 
 export default function CustomersPage() {
   const { toast } = useToast()
@@ -76,7 +88,6 @@ export default function CustomersPage() {
       return
     }
 
-    // Validate E.164 format
     if (!phone.match(/^\+[1-9]\d{1,14}$/)) {
       toast({
         title: 'Hata',
@@ -152,7 +163,6 @@ export default function CustomersPage() {
             return
           }
 
-          // Validate E.164 format
           const invalid = parsedCustomers.find(
             (c) => !c.phone.match(/^\+[1-9]\d{1,14}$/)
           )
@@ -215,17 +225,30 @@ export default function CustomersPage() {
   }
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Müşteriler</h1>
-        <div className="flex gap-2">
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Müşteriler</h1>
+          <p className="text-muted-foreground mt-1">
+            Müşteri bilgilerinizi yönetin ve organize edin
+          </p>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-2">
           <Dialog open={csvDialogOpen} onOpenChange={setCsvDialogOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline">CSV Yükle</Button>
+              <Button variant="outline" className="gap-2">
+                <Upload className="h-4 w-4" />
+                <span className="hidden sm:inline">CSV Yükle</span>
+                <span className="sm:hidden">CSV</span>
+              </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>CSV ile Toplu Müşteri Ekle</DialogTitle>
+                <DialogTitle className="flex items-center gap-2">
+                  <FileUp className="h-5 w-5" />
+                  CSV ile Toplu Müşteri Ekle
+                </DialogTitle>
                 <DialogDescription>
                   CSV dosyası formatı: name, phone (E.164 formatında, örn: +905551234567)
                 </DialogDescription>
@@ -245,8 +268,18 @@ export default function CustomersPage() {
                 <Button variant="outline" onClick={() => setCsvDialogOpen(false)}>
                   İptal
                 </Button>
-                <Button onClick={handleCsvUpload} disabled={creating || !csvFile}>
-                  {creating ? 'Yükleniyor...' : 'Yükle'}
+                <Button onClick={handleCsvUpload} disabled={creating || !csvFile} className="gap-2">
+                  {creating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Yükleniyor...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4" />
+                      Yükle
+                    </>
+                  )}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -254,11 +287,18 @@ export default function CustomersPage() {
 
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button>Yeni Müşteri</Button>
+              <Button className="gap-2">
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">Yeni Müşteri</span>
+                <span className="sm:hidden">Yeni</span>
+              </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Yeni Müşteri Ekle</DialogTitle>
+                <DialogTitle className="flex items-center gap-2">
+                  <UserPlus className="h-5 w-5" />
+                  Yeni Müşteri Ekle
+                </DialogTitle>
                 <DialogDescription>
                   Müşteri bilgilerini girin. Telefon E.164 formatında olmalıdır (örn: +905551234567)
                 </DialogDescription>
@@ -281,14 +321,27 @@ export default function CustomersPage() {
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="+905551234567"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    E.164 formatında olmalıdır (ülke kodu + numara)
+                  </p>
                 </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setDialogOpen(false)}>
                   İptal
                 </Button>
-                <Button onClick={handleCreateCustomer} disabled={creating}>
-                  {creating ? 'Ekleniyor...' : 'Ekle'}
+                <Button onClick={handleCreateCustomer} disabled={creating} className="gap-2">
+                  {creating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Ekleniyor...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4" />
+                      Ekle
+                    </>
+                  )}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -296,83 +349,123 @@ export default function CustomersPage() {
         </div>
       </div>
 
-      <div className="mb-4">
-        <Input
-          placeholder="Müşteri ara..."
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value)
-            setPage(1)
-          }}
-          className="max-w-sm"
-        />
-      </div>
+      {/* Search */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Müşteri ara..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value)
+                setPage(1)
+              }}
+              className="pl-10"
+            />
+          </div>
+        </CardContent>
+      </Card>
 
-      {loading ? (
-        <div>Yükleniyor...</div>
-      ) : (
-        <>
-          <div className="border rounded-lg">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>İsim</TableHead>
-                  <TableHead>Telefon</TableHead>
-                  <TableHead>Eklenme Tarihi</TableHead>
-                  <TableHead>Son Mesaj</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {customers.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center">
-                      Müşteri bulunamadı
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  customers.map((customer) => (
-                    <TableRow key={customer.id}>
-                      <TableCell className="font-medium">{customer.name}</TableCell>
-                      <TableCell>{customer.phone}</TableCell>
-                      <TableCell>
-                        {new Date(customer.created_at).toLocaleDateString('tr-TR')}
-                      </TableCell>
-                      <TableCell>
-                        {customer.last_message_at
-                          ? new Date(customer.last_message_at).toLocaleDateString('tr-TR')
-                          : '-'}
-                      </TableCell>
+      {/* Customers Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Müşteri Listesi
+          </CardTitle>
+          <CardDescription>
+            Toplam {total} müşteri
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+          ) : customers.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <Users className="h-12 w-12 text-muted-foreground/50 mb-4" />
+              <p className="text-sm font-medium text-muted-foreground mb-1">
+                {search ? 'Müşteri bulunamadı' : 'Henüz müşteri eklenmedi'}
+              </p>
+              <p className="text-xs text-muted-foreground mb-4">
+                {search ? 'Arama kriterlerinizi değiştirmeyi deneyin' : 'İlk müşterinizi eklemek için Yeni Müşteri butonuna tıklayın'}
+              </p>
+              {!search && (
+                <Button onClick={() => setDialogOpen(true)} className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Yeni Müşteri Ekle
+                </Button>
+              )}
+            </div>
+          ) : (
+            <>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>İsim</TableHead>
+                      <TableHead className="hidden sm:table-cell">Telefon</TableHead>
+                      <TableHead className="hidden md:table-cell">Eklenme Tarihi</TableHead>
+                      <TableHead className="hidden lg:table-cell">Son Mesaj</TableHead>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                  </TableHeader>
+                  <TableBody>
+                    {customers.map((customer) => (
+                      <TableRow key={customer.id}>
+                        <TableCell className="font-medium">{customer.name}</TableCell>
+                        <TableCell className="hidden sm:table-cell font-mono text-sm">
+                          {customer.phone}
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
+                          {new Date(customer.created_at).toLocaleDateString('tr-TR')}
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
+                          {customer.last_message_at
+                            ? new Date(customer.last_message_at).toLocaleDateString('tr-TR')
+                            : '-'}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
 
-          <div className="mt-4 flex justify-between items-center">
-            <div className="text-sm text-muted-foreground">
-              Toplam {total} müşteri
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-              >
-                Önceki
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setPage((p) => p + 1)}
-                disabled={page * limit >= total}
-              >
-                Sonraki
-              </Button>
-            </div>
-          </div>
-        </>
-      )}
+              {/* Pagination */}
+              {total > limit && (
+                <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="text-sm text-muted-foreground">
+                    Sayfa {page} / {Math.ceil(total / limit)} ({total} müşteri)
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={page === 1}
+                      className="gap-2"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Önceki
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage((p) => p + 1)}
+                      disabled={page * limit >= total}
+                      className="gap-2"
+                    >
+                      Sonraki
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }
-
