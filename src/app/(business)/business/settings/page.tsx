@@ -197,7 +197,7 @@ export default function SettingsPage() {
             <CardContent className="space-y-4">
               <div className="p-4 rounded-lg bg-muted border-2 border-dashed">
                 <p className="text-sm text-muted-foreground mb-2">Örnek Mesaj:</p>
-                <p className="text-sm whitespace-pre-wrap">
+                <p className="text-sm whitespace-pre-wrap break-words overflow-wrap-anywhere">
                   {messageTemplate
                     .replace(/{firstName}/g, 'Ahmet')
                     .replace(/{reviewUrl}/g, reviewUrl || 'https://example.com/review')}

@@ -264,7 +264,7 @@ export default function SendMessagePage() {
                 <>
                   <div className="p-4 rounded-lg bg-muted border-2 border-dashed">
                     <p className="text-xs text-muted-foreground mb-2 font-medium">Örnek Mesaj:</p>
-                    <p className="text-sm whitespace-pre-wrap">
+                    <p className="text-sm whitespace-pre-wrap break-words overflow-wrap-anywhere">
                       {previewMessage(
                         customers.find((c) => selectedCustomers.has(c.id))?.name || 'Müşteri'
                       )}
