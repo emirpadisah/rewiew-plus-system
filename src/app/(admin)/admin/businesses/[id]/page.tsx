@@ -32,6 +32,15 @@ import {
 } from '@/components/ui/table'
 import { useToast } from '@/hooks/use-toast'
 import { Business, WhatsAppConnection, User } from '@/types'
+import { 
+  Building2, 
+  Users, 
+  UserPlus, 
+  Key, 
+  Loader2,
+  CheckCircle2,
+  XCircle
+} from 'lucide-react'
 
 export default function BusinessDetailPage() {
   const params = useParams()
@@ -242,38 +251,68 @@ export default function BusinessDetailPage() {
   }
 
   if (loading) {
-    return <div>Yükleniyor...</div>
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-sm text-muted-foreground">Yükleniyor...</p>
+        </div>
+      </div>
+    )
   }
 
   if (!business) {
-    return <div>İşletme bulunamadı</div>
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
+        <Building2 className="h-12 w-12 text-muted-foreground/50 mb-4" />
+        <p className="text-sm font-medium text-muted-foreground mb-1">
+          İşletme bulunamadı
+        </p>
+        <p className="text-xs text-muted-foreground">
+          İşletme silinmiş veya erişim yetkiniz olmayabilir
+        </p>
+      </div>
+    )
   }
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold mb-8">{business.name}</h1>
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">{business.name}</h1>
+        <p className="text-muted-foreground mt-1">
+          İşletme detayları ve yönetim
+        </p>
+      </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>İşletme Bilgileri</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5" />
+              İşletme Bilgileri
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
               <Label>Durum</Label>
-              <div className="mt-2 flex gap-2">
+              <div className="mt-2 flex flex-col sm:flex-row gap-2">
                 <Button
                   variant={business.status === 'active' ? 'default' : 'outline'}
                   onClick={() => handleUpdateStatus('active')}
                   disabled={updating}
+                  className="gap-2"
                 >
+                  <CheckCircle2 className="h-4 w-4" />
                   Aktif
                 </Button>
                 <Button
                   variant={business.status === 'passive' ? 'default' : 'outline'}
                   onClick={() => handleUpdateStatus('passive')}
                   disabled={updating}
+                  className="gap-2"
                 >
+                  <XCircle className="h-4 w-4" />
                   Pasif
                 </Button>
               </div>
@@ -321,7 +360,10 @@ export default function BusinessDetailPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Kullanıcı İşlemleri</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Kullanıcı İşlemleri
+            </CardTitle>
             <CardDescription>
               Bu işletmeye ait kullanıcıları yönetin
             </CardDescription>
@@ -329,7 +371,10 @@ export default function BusinessDetailPage() {
           <CardContent className="space-y-4">
             <Dialog open={userDialogOpen} onOpenChange={setUserDialogOpen}>
               <DialogTrigger asChild>
-                <Button>Yeni Kullanıcı Oluştur</Button>
+                <Button className="w-full sm:w-auto gap-2">
+                  <UserPlus className="h-4 w-4" />
+                  Yeni Kullanıcı Oluştur
+                </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
@@ -374,12 +419,12 @@ export default function BusinessDetailPage() {
             {users.length > 0 && (
               <div className="space-y-2">
                 <Label>Mevcut Kullanıcılar</Label>
-                <div className="border rounded-lg">
+                <div className="rounded-md border overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead>Email</TableHead>
-                        <TableHead>Oluşturulma</TableHead>
+                        <TableHead className="hidden sm:table-cell">Oluşturulma</TableHead>
                         <TableHead className="text-right">İşlemler</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -387,7 +432,7 @@ export default function BusinessDetailPage() {
                       {users.map((user) => (
                         <TableRow key={user.id}>
                           <TableCell className="font-medium">{user.email}</TableCell>
-                          <TableCell>
+                          <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
                             {new Date(user.created_at).toLocaleDateString('tr-TR')}
                           </TableCell>
                           <TableCell className="text-right">
@@ -395,8 +440,11 @@ export default function BusinessDetailPage() {
                               variant="outline"
                               size="sm"
                               onClick={() => openPasswordDialog(user.id)}
+                              className="w-full sm:w-auto gap-2"
                             >
-                              Şifre Değiştir
+                              <Key className="h-4 w-4" />
+                              <span className="hidden sm:inline">Şifre Değiştir</span>
+                              <span className="sm:hidden">Şifre</span>
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -408,8 +456,14 @@ export default function BusinessDetailPage() {
             )}
 
             {users.length === 0 && (
-              <div className="text-sm text-muted-foreground text-center py-4">
-                Bu işletme için henüz kullanıcı oluşturulmamış
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <Users className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                <p className="text-sm font-medium text-muted-foreground mb-1">
+                  Henüz kullanıcı oluşturulmamış
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Bu işletme için ilk kullanıcıyı oluşturmak için yukarıdaki butona tıklayın
+                </p>
               </div>
             )}
           </CardContent>

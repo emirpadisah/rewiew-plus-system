@@ -4,49 +4,118 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
+import { useState } from 'react'
+import { 
+  LayoutDashboard, 
+  Building2, 
+  LogOut,
+  Menu,
+  X,
+  Shield
+} from 'lucide-react'
 
 export function AdminNav() {
   const pathname = usePathname()
   const router = useRouter()
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' })
     router.push('/auth/login')
   }
 
+  const navItems = [
+    { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/admin/businesses', label: 'İşletmeler', icon: Building2 },
+  ]
+
+  const isActive = (href: string) => {
+    if (href === '/admin') return pathname === '/admin'
+    return pathname?.startsWith(href)
+  }
+
   return (
-    <nav className="border-b">
-      <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-        <div className="flex items-center space-x-6">
-          <Link href="/admin" className="text-xl font-bold">
-            Admin Panel
+    <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex h-16 items-center justify-between">
+          {/* Logo */}
+          <Link href="/admin" className="flex items-center space-x-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+              <Shield className="h-5 w-5" />
+            </div>
+            <span className="text-lg font-semibold hidden sm:inline-block">
+              Admin Panel
+            </span>
           </Link>
-          <div className="flex space-x-4">
-            <Link
-              href="/admin"
-              className={`px-3 py-2 rounded-md text-sm font-medium ${
-                pathname === '/admin'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'hover:bg-accent'
-              }`}
+
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex md:items-center md:space-x-1">
+            {navItems.map((item) => {
+              const Icon = item.icon
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    isActive(item.href)
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  <span>{item.label}</span>
+                </Link>
+              )
+            })}
+          </div>
+
+          {/* Desktop Actions */}
+          <div className="hidden md:flex md:items-center md:space-x-4">
+            <Button variant="ghost" size="sm" onClick={handleLogout} className="gap-2">
+              <LogOut className="h-4 w-4" />
+              <span>Çıkış</span>
+            </Button>
+          </div>
+
+          {/* Mobile Menu Button */}
+          <div className="flex md:hidden items-center space-x-2">
+            <Button variant="ghost" size="sm" onClick={handleLogout} className="gap-2">
+              <LogOut className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="gap-2"
             >
-              Dashboard
-            </Link>
-            <Link
-              href="/admin/businesses"
-              className={`px-3 py-2 rounded-md text-sm font-medium ${
-                pathname?.startsWith('/admin/businesses')
-                  ? 'bg-primary text-primary-foreground'
-                  : 'hover:bg-accent'
-              }`}
-            >
-              İşletmeler
-            </Link>
+              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </Button>
           </div>
         </div>
-        <Button variant="outline" onClick={handleLogout}>
-          Çıkış
-        </Button>
+
+        {/* Mobile Navigation */}
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t py-4 space-y-1">
+            {navItems.map((item) => {
+              const Icon = item.icon
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`flex items-center space-x-3 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    isActive(item.href)
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                  }`}
+                >
+                  <Icon className="h-5 w-5" />
+                  <span>{item.label}</span>
+                </Link>
+              )
+            })}
+          </div>
+        )}
       </div>
     </nav>
   )

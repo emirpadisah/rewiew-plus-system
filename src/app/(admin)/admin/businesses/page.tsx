@@ -24,6 +24,17 @@ import {
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
 import { Business, BusinessStatus } from '@/types'
+import { 
+  Plus, 
+  Building2, 
+  Search, 
+  CheckCircle2, 
+  XCircle,
+  Loader2,
+  ChevronLeft,
+  ChevronRight
+} from 'lucide-react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default function BusinessesPage() {
   const { toast } = useToast()
@@ -137,12 +148,21 @@ export default function BusinessesPage() {
   }
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">İşletmeler</h1>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">İşletmeler</h1>
+          <p className="text-muted-foreground mt-1">
+            Tüm işletmeleri görüntüleyin ve yönetin
+          </p>
+        </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button>Yeni İşletme</Button>
+            <Button className="w-full sm:w-auto gap-2">
+              <Plus className="h-4 w-4" />
+              Yeni İşletme
+            </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
@@ -205,96 +225,140 @@ export default function BusinessesPage() {
         </Dialog>
       </div>
 
-      <div className="mb-4">
-        <Input
-          placeholder="İşletme ara..."
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value)
-            setPage(1)
-          }}
-          className="max-w-sm"
-        />
-      </div>
+      {/* Search */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="İşletme ara..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value)
+                setPage(1)
+              }}
+              className="pl-10"
+            />
+          </div>
+        </CardContent>
+      </Card>
 
-      {loading ? (
-        <div>Yükleniyor...</div>
-      ) : (
-        <>
-          <div className="border rounded-lg">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>İşletme Adı</TableHead>
-                  <TableHead>Durum</TableHead>
-                  <TableHead>Oluşturulma</TableHead>
-                  <TableHead>İşlemler</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {businesses.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center">
-                      İşletme bulunamadı
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  businesses.map((business) => (
-                    <TableRow key={business.id}>
-                      <TableCell className="font-medium">
-                        {business.name}
-                      </TableCell>
-                      <TableCell>
-                        <span
-                          className={`px-2 py-1 rounded text-xs ${
-                            business.status === 'active'
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-red-100 text-red-800'
-                          }`}
-                        >
-                          {business.status === 'active' ? 'Aktif' : 'Pasif'}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        {new Date(business.created_at).toLocaleDateString('tr-TR')}
-                      </TableCell>
-                      <TableCell>
-                        <Link href={`/admin/businesses/${business.id}`}>
-                          <Button variant="outline" size="sm">
-                            Detay
-                          </Button>
-                        </Link>
-                      </TableCell>
+      {/* Businesses Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Building2 className="h-5 w-5" />
+            İşletme Listesi
+          </CardTitle>
+          <CardDescription>
+            Toplam {total} işletme
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+          ) : businesses.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <Building2 className="h-12 w-12 text-muted-foreground/50 mb-4" />
+              <p className="text-sm font-medium text-muted-foreground mb-1">
+                {search ? 'İşletme bulunamadı' : 'Henüz işletme eklenmedi'}
+              </p>
+              <p className="text-xs text-muted-foreground mb-4">
+                {search ? 'Arama kriterlerinizi değiştirmeyi deneyin' : 'İlk işletmeyi eklemek için Yeni İşletme butonuna tıklayın'}
+              </p>
+              {!search && (
+                <Button onClick={() => setDialogOpen(true)} className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Yeni İşletme Ekle
+                </Button>
+              )}
+            </div>
+          ) : (
+            <>
+              <div className="rounded-md border overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>İşletme Adı</TableHead>
+                      <TableHead className="hidden sm:table-cell">Durum</TableHead>
+                      <TableHead className="hidden md:table-cell">Oluşturulma</TableHead>
+                      <TableHead className="text-right">İşlemler</TableHead>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                  </TableHeader>
+                  <TableBody>
+                    {businesses.map((business) => (
+                      <TableRow key={business.id}>
+                        <TableCell className="font-medium">
+                          {business.name}
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                              business.status === 'active'
+                                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                                : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                            }`}
+                          >
+                            {business.status === 'active' ? (
+                              <CheckCircle2 className="h-3 w-3" />
+                            ) : (
+                              <XCircle className="h-3 w-3" />
+                            )}
+                            {business.status === 'active' ? 'Aktif' : 'Pasif'}
+                          </span>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
+                          {new Date(business.created_at).toLocaleDateString('tr-TR')}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Link href={`/admin/businesses/${business.id}`}>
+                            <Button variant="outline" size="sm" className="w-full sm:w-auto">
+                              Detay
+                            </Button>
+                          </Link>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
 
-          <div className="mt-4 flex justify-between items-center">
-            <div className="text-sm text-muted-foreground">
-              Toplam {total} işletme
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-              >
-                Önceki
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setPage((p) => p + 1)}
-                disabled={page * limit >= total}
-              >
-                Sonraki
-              </Button>
-            </div>
-          </div>
-        </>
-      )}
+              {/* Pagination */}
+              {total > limit && (
+                <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="text-sm text-muted-foreground">
+                    Sayfa {page} / {Math.ceil(total / limit)} ({total} işletme)
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={page === 1}
+                      className="gap-2"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Önceki
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage((p) => p + 1)}
+                      disabled={page * limit >= total}
+                      className="gap-2"
+                    >
+                      Sonraki
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }
