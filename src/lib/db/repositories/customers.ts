@@ -90,3 +90,21 @@ export async function updateCustomerLastMessageAt(
   if (error) throw error
 }
 
+export async function updateCustomer(
+  customerId: string,
+  updates: {
+    notes?: string | null
+    category?: string | null
+  }
+): Promise<Customer> {
+  const { data, error } = await supabase
+    .from('customers')
+    .update(updates)
+    .eq('id', customerId)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+

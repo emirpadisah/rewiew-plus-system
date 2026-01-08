@@ -39,6 +39,8 @@ export interface Customer {
   business_id: string
   name: string
   phone: string // E.164 format
+  notes: string | null
+  category: string | null
   created_at: string
   last_message_at: string | null
 }
@@ -67,5 +69,15 @@ export interface BusinessSettings {
   review_platform: ReviewPlatform
   review_url: string | null
   message_template: string | null
+}
+
+export interface MessageTemplate {
+  id: string
+  business_id: string
+  name: string
+  template: string
+  is_default: boolean
+  created_at: string
+  updated_at: string
 }
 

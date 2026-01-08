@@ -8,10 +8,12 @@ import { getWhatsAppConnectionByBusinessId } from '@/lib/db/repositories/whatsap
 import { getBusinessSettings } from '@/lib/db/repositories/business-settings'
 import { createMessageLog } from '@/lib/db/repositories/message-logs'
 import { sendTextMessage } from '@/lib/evolution/client'
+import { getMessageTemplateById, getDefaultMessageTemplate } from '@/lib/db/repositories/message-templates'
 import { z } from 'zod'
 
 const sendMessageSchema = z.object({
   customerIds: z.array(z.string()),
+  templateId: z.string().optional(),
 })
 
 // Rate limiting configuration - CRITICAL: Prevents account spam/ban
@@ -41,7 +43,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { customerIds } = sendMessageSchema.parse(body)
+    const { customerIds, templateId } = sendMessageSchema.parse(body)
 
     // Get WhatsApp connection
     const connection = await getWhatsAppConnectionByBusinessId(user.businessId)
@@ -75,10 +77,25 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No customers found' }, { status: 400 })
     }
 
+    // Get message template - prioritize selected template, then default template, then settings template
+    let messageTemplate = settings.message_template || 'Merhaba {firstName}, bizimle deneyiminizi değerlendirmek ister misiniz? {reviewUrl}'
+    
+    if (templateId) {
+      const selectedTemplate = await getMessageTemplateById(templateId)
+      if (selectedTemplate && selectedTemplate.business_id === user.businessId) {
+        messageTemplate = selectedTemplate.template
+      }
+    } else {
+      // Try to get default template
+      const defaultTemplate = await getDefaultMessageTemplate(user.businessId)
+      if (defaultTemplate) {
+        messageTemplate = defaultTemplate.template
+      }
+    }
+
     // Store values in local constants to avoid TypeScript null check issues in closures
     const businessId = user.businessId
     const instanceName = connection.instance_name
-    const messageTemplate = settings.message_template || 'Merhaba {firstName}, bizimle deneyiminizi değerlendirmek ister misiniz? {reviewUrl}'
     const reviewUrl = settings.review_url || ''
 
     // Send messages with rate limiting

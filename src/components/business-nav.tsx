@@ -13,7 +13,9 @@ import {
   Send,
   LogOut,
   Menu,
-  X
+  X,
+  History,
+  FileText
 } from 'lucide-react'
 
 export function BusinessNav() {
@@ -47,6 +49,8 @@ export function BusinessNav() {
   const navItems = [
     { href: '/business', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/business/customers', label: 'Müşteriler', icon: Users },
+    { href: '/business/messages', label: 'Mesaj Geçmişi', icon: History },
+    { href: '/business/message-templates', label: 'Şablonlar', icon: FileText },
     { href: '/business/whatsapp', label: 'WhatsApp', icon: MessageSquare },
     { href: '/business/settings', label: 'Ayarlar', icon: Settings },
     { href: '/business/send-message', label: 'Mesaj Gönder', icon: Send },

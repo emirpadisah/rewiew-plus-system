@@ -21,8 +21,17 @@ import {
   CheckCircle2,
   Loader2,
   AlertCircle,
-  Eye
+  Eye,
+  FileText
 } from 'lucide-react'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Label } from '@/components/ui/label'
 
 export default function SendMessagePage() {
   const { toast } = useToast()
@@ -31,10 +40,13 @@ export default function SendMessagePage() {
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [settings, setSettings] = useState<{ review_platform: string; review_url: string | null; message_template: string | null } | null>(null)
+  const [templates, setTemplates] = useState<Array<{ id: string; name: string; template: string; is_default: boolean }>>([])
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('')
 
   useEffect(() => {
     fetchCustomers()
     fetchSettings()
+    fetchTemplates()
   }, [])
 
   const fetchCustomers = async () => {
@@ -62,6 +74,21 @@ export default function SendMessagePage() {
       setSettings(data)
     } catch (error) {
       console.error('Error fetching settings:', error)
+    }
+  }
+
+  const fetchTemplates = async () => {
+    try {
+      const response = await fetch('/api/business/message-templates')
+      const data = await response.json()
+      setTemplates(data.templates || [])
+      // Set default template if exists
+      const defaultTemplate = data.templates?.find((t: any) => t.is_default)
+      if (defaultTemplate) {
+        setSelectedTemplateId(defaultTemplate.id)
+      }
+    } catch (error) {
+      console.error('Error fetching templates:', error)
     }
   }
 
@@ -109,6 +136,7 @@ export default function SendMessagePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           customerIds: Array.from(selectedCustomers),
+          templateId: selectedTemplateId || undefined,
         }),
       })
 
@@ -145,10 +173,21 @@ export default function SendMessagePage() {
     }
   }
 
+  const getSelectedTemplate = () => {
+    if (selectedTemplateId) {
+      const template = templates.find(t => t.id === selectedTemplateId)
+      if (template) return template.template
+    }
+    // Fallback to default template or settings template
+    const defaultTemplate = templates.find(t => t.is_default)
+    if (defaultTemplate) return defaultTemplate.template
+    return settings?.message_template || 'Merhaba {firstName}, bizimle deneyiminizi değerlendirmek ister misiniz? {reviewUrl}'
+  }
+
   const previewMessage = (customerName: string) => {
     const firstName = customerName.split(' ')[0]
     const reviewUrl = settings?.review_url || 'https://example.com/review'
-    const template = settings?.message_template || 'Merhaba {firstName}, bizimle deneyiminizi değerlendirmek ister misiniz? {reviewUrl}'
+    const template = getSelectedTemplate()
     return template
       .replace(/{firstName}/g, firstName)
       .replace(/{reviewUrl}/g, reviewUrl)
@@ -262,6 +301,36 @@ export default function SendMessagePage() {
             <CardContent className="space-y-4">
               {selectedCustomers.size > 0 ? (
                 <>
+                  {/* Template Selection */}
+                  {templates.length > 0 && (
+                    <div className="space-y-2">
+                      <Label htmlFor="template-select" className="flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        Mesaj Şablonu
+                      </Label>
+                      <Select
+                        value={selectedTemplateId}
+                        onValueChange={setSelectedTemplateId}
+                      >
+                        <SelectTrigger id="template-select">
+                          <SelectValue placeholder="Şablon seçin" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Ayarlardan (Varsayılan)</SelectItem>
+                          {templates.map((template) => (
+                            <SelectItem key={template.id} value={template.id}>
+                              {template.name}
+                              {template.is_default && ' ⭐'}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Mesaj göndermek için kullanılacak şablonu seçin
+                      </p>
+                    </div>
+                  )}
+
                   <div className="p-4 rounded-lg bg-muted border-2 border-dashed">
                     <p className="text-xs text-muted-foreground mb-2 font-medium">Örnek Mesaj:</p>
                     <p className="text-sm whitespace-pre-wrap break-words overflow-wrap-anywhere">

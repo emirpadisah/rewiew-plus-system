@@ -34,8 +34,20 @@ import {
   ChevronRight,
   Loader2,
   UserPlus,
-  FileUp
+  FileUp,
+  Edit,
+  Tag,
+  StickyNote,
+  Filter
 } from 'lucide-react'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 export default function CustomersPage() {
   const { toast } = useToast()
@@ -50,18 +62,24 @@ export default function CustomersPage() {
   const [phone, setPhone] = useState('')
   const [csvFile, setCsvFile] = useState<File | null>(null)
   const [creating, setCreating] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
+  const [customerNotes, setCustomerNotes] = useState('')
+  const [customerCategory, setCustomerCategory] = useState('')
+  const [updating, setUpdating] = useState(false)
+  const [categoryFilter, setCategoryFilter] = useState<string>('all')
 
   const limit = 10
 
   useEffect(() => {
     fetchCustomers()
-  }, [search, page])
+  }, [])
 
   const fetchCustomers = async () => {
     setLoading(true)
     try {
       const response = await fetch(
-        `/api/business/customers?limit=${limit}&offset=${(page - 1) * limit}${search ? `&search=${encodeURIComponent(search)}` : ''}`
+        `/api/business/customers?limit=1000&offset=0${search ? `&search=${encodeURIComponent(search)}` : ''}`
       )
       const data = await response.json()
       setCustomers(data.data || [])
@@ -77,6 +95,37 @@ export default function CustomersPage() {
       setLoading(false)
     }
   }
+
+  // Get unique categories from customers
+  const categories = Array.from(
+    new Set(
+      customers
+        .map((c) => c.category)
+        .filter((cat): cat is string => cat !== null && cat !== '')
+    )
+  ).sort()
+
+  // Filter customers by category and search
+  const filteredCustomers = customers.filter((customer) => {
+    const matchesSearch =
+      customer.name.toLowerCase().includes(search.toLowerCase()) ||
+      customer.phone.includes(search) ||
+      (customer.notes && customer.notes.toLowerCase().includes(search.toLowerCase()))
+    
+    const matchesCategory =
+      categoryFilter === 'all' ||
+      (categoryFilter === 'uncategorized' && !customer.category) ||
+      customer.category === categoryFilter
+
+    return matchesSearch && matchesCategory
+  })
+
+  // Paginate filtered results
+  const paginatedCustomers = filteredCustomers.slice(
+    (page - 1) * limit,
+    page * limit
+  )
+  const filteredTotal = filteredCustomers.length
 
   const handleCreateCustomer = async () => {
     if (!name.trim() || !phone.trim()) {
@@ -224,6 +273,50 @@ export default function CustomersPage() {
     }
   }
 
+  const handleOpenEditDialog = (customer: Customer) => {
+    setSelectedCustomer(customer)
+    setCustomerNotes(customer.notes || '')
+    setCustomerCategory(customer.category || '')
+    setEditDialogOpen(true)
+  }
+
+  const handleUpdateCustomer = async () => {
+    if (!selectedCustomer) return
+
+    setUpdating(true)
+    try {
+      const response = await fetch(`/api/business/customers/${selectedCustomer.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          notes: customerNotes.trim() || null,
+          category: customerCategory.trim() || null,
+        }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to update customer')
+      }
+
+      toast({
+        title: 'Başarılı',
+        description: 'Müşteri bilgileri güncellendi',
+      })
+      setEditDialogOpen(false)
+      setSelectedCustomer(null)
+      fetchCustomers()
+    } catch (error: any) {
+      toast({
+        title: 'Hata',
+        description: error.message || 'Müşteri güncellenirken bir hata oluştu',
+        variant: 'destructive',
+      })
+    } finally {
+      setUpdating(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -346,23 +439,112 @@ export default function CustomersPage() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+
+          {/* Edit Customer Dialog */}
+          <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Edit className="h-5 w-5" />
+                  Müşteri Düzenle
+                </DialogTitle>
+                <DialogDescription>
+                  {selectedCustomer?.name} için not ve kategori ekleyin
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="category" className="flex items-center gap-2">
+                    <Tag className="h-4 w-4" />
+                    Kategori
+                  </Label>
+                  <Input
+                    id="category"
+                    value={customerCategory}
+                    onChange={(e) => setCustomerCategory(e.target.value)}
+                    placeholder="Örn: VIP, Yeni Müşteri, Düzenli"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Müşteriyi kategorize etmek için bir kategori adı girin
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="notes" className="flex items-center gap-2">
+                    <StickyNote className="h-4 w-4" />
+                    Notlar
+                  </Label>
+                  <Textarea
+                    id="notes"
+                    value={customerNotes}
+                    onChange={(e) => setCustomerNotes(e.target.value)}
+                    placeholder="Müşteri hakkında notlar..."
+                    rows={4}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Müşteri hakkında özel notlar ekleyebilirsiniz
+                  </p>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+                  İptal
+                </Button>
+                <Button onClick={handleUpdateCustomer} disabled={updating} className="gap-2">
+                  {updating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Kaydediliyor...
+                    </>
+                  ) : (
+                    <>
+                      <Edit className="h-4 w-4" />
+                      Kaydet
+                    </>
+                  )}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
-      {/* Search */}
+      {/* Search and Filters */}
       <Card>
         <CardContent className="pt-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Müşteri ara..."
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value)
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Müşteri adı, telefon veya not ara..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value)
+                  setPage(1)
+                }}
+                className="pl-10"
+              />
+            </div>
+            <Select
+              value={categoryFilter}
+              onValueChange={(value) => {
+                setCategoryFilter(value)
                 setPage(1)
               }}
-              className="pl-10"
-            />
+            >
+              <SelectTrigger className="w-full sm:w-[200px]">
+                <Filter className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Kategori Filtrele" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tüm Kategoriler</SelectItem>
+                <SelectItem value="uncategorized">Kategorisiz</SelectItem>
+                {categories.map((category) => (
+                  <SelectItem key={category} value={category}>
+                    {category}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>
@@ -375,7 +557,9 @@ export default function CustomersPage() {
             Müşteri Listesi
           </CardTitle>
           <CardDescription>
-            Toplam {total} müşteri
+            {categoryFilter !== 'all' || search
+              ? `${filteredTotal} müşteri bulundu (Toplam: ${total})`
+              : `Toplam ${total} müşteri`}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -383,7 +567,7 @@ export default function CustomersPage() {
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
-          ) : customers.length === 0 ? (
+          ) : paginatedCustomers.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <Users className="h-12 w-12 text-muted-foreground/50 mb-4" />
               <p className="text-sm font-medium text-muted-foreground mb-1">
@@ -404,27 +588,48 @@ export default function CustomersPage() {
               <div className="rounded-md border">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>İsim</TableHead>
-                      <TableHead className="hidden sm:table-cell">Telefon</TableHead>
-                      <TableHead className="hidden md:table-cell">Eklenme Tarihi</TableHead>
-                      <TableHead className="hidden lg:table-cell">Son Mesaj</TableHead>
-                    </TableRow>
+                  <TableRow>
+                    <TableHead>İsim</TableHead>
+                    <TableHead className="hidden sm:table-cell">Telefon</TableHead>
+                    <TableHead className="hidden md:table-cell">Kategori</TableHead>
+                    <TableHead className="hidden lg:table-cell">Not</TableHead>
+                    <TableHead className="hidden xl:table-cell">Eklenme Tarihi</TableHead>
+                    <TableHead className="text-right">İşlemler</TableHead>
+                  </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {customers.map((customer) => (
+                    {paginatedCustomers.map((customer) => (
                       <TableRow key={customer.id}>
                         <TableCell className="font-medium">{customer.name}</TableCell>
                         <TableCell className="hidden sm:table-cell font-mono text-sm">
                           {customer.phone}
                         </TableCell>
-                        <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
+                        <TableCell className="hidden md:table-cell">
+                          {customer.category ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+                              <Tag className="h-3 w-3" />
+                              {customer.category}
+                            </span>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell text-sm text-muted-foreground max-w-xs truncate">
+                          {customer.notes || '-'}
+                        </TableCell>
+                        <TableCell className="hidden xl:table-cell text-sm text-muted-foreground">
                           {new Date(customer.created_at).toLocaleDateString('tr-TR')}
                         </TableCell>
-                        <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
-                          {customer.last_message_at
-                            ? new Date(customer.last_message_at).toLocaleDateString('tr-TR')
-                            : '-'}
+                        <TableCell className="text-right">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleOpenEditDialog(customer)}
+                            className="gap-2 w-full sm:w-auto"
+                          >
+                            <Edit className="h-4 w-4" />
+                            <span className="hidden sm:inline">Düzenle</span>
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -433,10 +638,10 @@ export default function CustomersPage() {
               </div>
 
               {/* Pagination */}
-              {total > limit && (
+              {filteredTotal > limit && (
                 <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4">
                   <div className="text-sm text-muted-foreground">
-                    Sayfa {page} / {Math.ceil(total / limit)} ({total} müşteri)
+                    Sayfa {page} / {Math.ceil(filteredTotal / limit)} ({filteredTotal} müşteri)
                   </div>
                   <div className="flex gap-2">
                     <Button
@@ -453,7 +658,7 @@ export default function CustomersPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => setPage((p) => p + 1)}
-                      disabled={page * limit >= total}
+                      disabled={page * limit >= filteredTotal}
                       className="gap-2"
                     >
                       Sonraki
