@@ -96,7 +96,84 @@ export async function getTotalMessageCount(): Promise<number> {
     .select('*', { count: 'exact', head: true })
 
   if (error) throw error
+
   return count || 0
+}
+
+/**
+ * Get message statistics for all businesses
+ * Returns array of businesses with their message stats
+ */
+export async function getMessageStatsByAllBusinesses(): Promise<Array<{
+  business_id: string
+  business_name: string
+  total: number
+  sent: number
+  failed: number
+  success_rate: number
+  last_message_at: string | null
+}>> {
+  // Get all message logs grouped by business
+  const { data: logs, error: logsError } = await supabase
+    .from('message_logs')
+    .select('business_id, status, created_at')
+    .order('created_at', { ascending: false })
+
+  if (logsError) throw logsError
+
+  // Get all businesses
+  const { data: businesses, error: businessesError } = await supabase
+    .from('businesses')
+    .select('id, name')
+
+  if (businessesError) throw businessesError
+
+  // Create business map
+  const businessMap = new Map(
+    (businesses || []).map(b => [b.id, b.name])
+  )
+
+  // Group logs by business_id
+  const statsMap = new Map<string, {
+    total: number
+    sent: number
+    failed: number
+    last_message_at: string | null
+  }>()
+
+  logs?.forEach((log) => {
+    const existing = statsMap.get(log.business_id) || {
+      total: 0,
+      sent: 0,
+      failed: 0,
+      last_message_at: null,
+    }
+
+    existing.total++
+    if (log.status === 'sent') {
+      existing.sent++
+    } else {
+      existing.failed++
+    }
+
+    // Track latest message date
+    if (!existing.last_message_at || log.created_at > existing.last_message_at) {
+      existing.last_message_at = log.created_at
+    }
+
+    statsMap.set(log.business_id, existing)
+  })
+
+  // Convert to array and calculate success rate
+  return Array.from(statsMap.entries()).map(([business_id, stats]) => ({
+    business_id,
+    business_name: businessMap.get(business_id) || 'Bilinmeyen İşletme',
+    total: stats.total,
+    sent: stats.sent,
+    failed: stats.failed,
+    success_rate: stats.total > 0 ? Math.round((stats.sent / stats.total) * 100) : 0,
+    last_message_at: stats.last_message_at,
+  })).sort((a, b) => b.total - a.total) // Sort by total messages descending
 }
 
 export async function getRecentMessageLogsWithCustomers(
@@ -176,4 +253,3 @@ export async function getMessageStatsByDateRange(
     ...stats,
   }))
 }
-

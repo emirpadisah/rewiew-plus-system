@@ -11,7 +11,8 @@ import {
   LogOut,
   Menu,
   X,
-  Shield
+  Shield,
+  MessageSquare
 } from 'lucide-react'
 
 export function AdminNav() {
@@ -27,6 +28,7 @@ export function AdminNav() {
   const navItems = [
     { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/admin/businesses', label: 'İşletmeler', icon: Building2 },
+    { href: '/admin/message-stats', label: 'Mesaj İstatistikleri', icon: MessageSquare },
   ]
 
   const isActive = (href: string) => {
@@ -79,7 +81,13 @@ export function AdminNav() {
 
           {/* Mobile Menu Button */}
           <div className="flex md:hidden items-center space-x-2">
-            <Button variant="ghost" size="sm" onClick={handleLogout} className="gap-2">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleLogout} 
+              className="gap-2"
+              aria-label="Çıkış yap"
+            >
               <LogOut className="h-4 w-4" />
             </Button>
             <Button
@@ -87,6 +95,8 @@ export function AdminNav() {
               size="sm"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="gap-2"
+              aria-label="Menüyü aç"
+              aria-expanded={mobileMenuOpen}
             >
               {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>
@@ -95,7 +105,7 @@ export function AdminNav() {
 
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t py-4 space-y-1">
+          <nav className="md:hidden border-t py-4 space-y-1" aria-label="Mobil navigasyon">
             {navItems.map((item) => {
               const Icon = item.icon
               return (
@@ -108,13 +118,14 @@ export function AdminNav() {
                       ? 'bg-primary text-primary-foreground'
                       : 'text-muted-foreground hover:bg-accent hover:text-foreground'
                   }`}
+                  aria-current={isActive(item.href) ? 'page' : undefined}
                 >
-                  <Icon className="h-5 w-5" />
+                  <Icon className="h-5 w-5" aria-hidden="true" />
                   <span>{item.label}</span>
                 </Link>
               )
             })}
-          </div>
+          </nav>
         )}
       </div>
     </nav>
