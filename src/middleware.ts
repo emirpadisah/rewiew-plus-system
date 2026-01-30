@@ -5,6 +5,24 @@ import { decodeJWT, JWT_COOKIE_NAME } from '@/lib/auth/jwt'
 export async function middleware(request: NextRequest) {
   const token = request.cookies.get(JWT_COOKIE_NAME)?.value
 
+  // Home page - redirect logged in users to dashboard
+  if (request.nextUrl.pathname === '/') {
+    if (token) {
+      try {
+        const payload = await decodeJWT(token)
+        // Redirect to appropriate dashboard
+        if (payload.role === 'admin') {
+          return NextResponse.redirect(new URL('/admin', request.url))
+        } else if (payload.role === 'business') {
+          return NextResponse.redirect(new URL('/business', request.url))
+        }
+      } catch {
+        // Invalid token, allow access to home page
+      }
+    }
+    return NextResponse.next()
+  }
+
   // Public routes
   if (request.nextUrl.pathname.startsWith('/auth/login')) {
     if (token) {
@@ -59,6 +77,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    '/',
     '/admin/:path*',
     '/business/:path*',
     '/auth/login',

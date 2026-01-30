@@ -6,7 +6,7 @@ import { Toaster } from "@/components/ui/toaster"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Yorum Artırıcı - WhatsApp Review SaaS",
+  title: "YorumUp - WhatsApp Review SaaS",
   description: "WhatsApp üzerinden müşterilere review mesajları gönderin",
 }
 
