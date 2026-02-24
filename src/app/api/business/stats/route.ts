@@ -7,13 +7,21 @@ import {
 } from '@/lib/db/repositories/message-logs'
 import { getWhatsAppConnectionByBusinessId } from '@/lib/db/repositories/whatsapp-connections'
 import { getCustomersByBusinessId } from '@/lib/db/repositories/customers'
+import { log } from '@/lib/logger'
+
+const MODULE = 'Business/Stats'
 
 export async function GET() {
+  const startTime = Date.now()
+  
   try {
     const user = await getCurrentUser()
     if (!user || user.role !== 'business' || !user.businessId) {
+      log.api(MODULE, 'GET', '/api/business/stats', 401)
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    log.debug(MODULE, 'İstatistikler çekiliyor başlatıldı', { businessId: user.businessId })
 
     // Get today and last 7 days for stats
     const today = new Date()
@@ -41,6 +49,17 @@ export async function GET() {
     const todayStr = today.toISOString().split('T')[0]
     const todayStats = dailyStats.find(s => s.date === todayStr) || { sent: 0, failed: 0 }
 
+    log.info(MODULE, 'İstatistikler başarıyla çekildi', {
+      businessId: user.businessId,
+      totalMessages: messageStats.total,
+      successRate,
+      whatsappStatus: whatsappConnection?.status,
+      totalCustomers: customerCount.count,
+      durationMs: Date.now() - startTime,
+    })
+
+    log.api(MODULE, 'GET', '/api/business/stats', 200, Date.now() - startTime)
+
     return NextResponse.json({
       messages: {
         ...messageStats,
@@ -58,7 +77,10 @@ export async function GET() {
       dailyStats: dailyStats.slice(-7), // Last 7 days
     })
   } catch (error) {
-    console.error('Error fetching stats:', error)
+    const duration = Date.now() - startTime
+    log.error(MODULE, 'İstatistikler çekilirken hata oluştu', error, { durationMs: duration })
+    log.api(MODULE, 'GET', '/api/business/stats', 500, duration)
+    
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

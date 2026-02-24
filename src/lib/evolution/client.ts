@@ -4,7 +4,9 @@ import {
   EvolutionConnectionStatus,
   EvolutionSendMessageResponse,
 } from './types'
+import { log } from '@/lib/logger'
 
+const MODULE = 'Evolution/WhatsApp'
 const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL || 'http://localhost:8080'
 const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY || ''
 
@@ -13,6 +15,7 @@ async function evolutionRequest<T>(
   options: RequestInit = {}
 ): Promise<T> {
   const url = `${EVOLUTION_API_URL}${endpoint}`
+  const startTime = Date.now()
   
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -24,78 +27,103 @@ async function evolutionRequest<T>(
     headers['apikey'] = EVOLUTION_API_KEY
   }
   
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  })
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers,
+    })
 
-  if (!response.ok) {
-    let errorMessage = `HTTP ${response.status}: ${response.statusText}`
-    let errorData: any = null
-    
-    try {
-      errorData = await response.json()
-      errorMessage = JSON.stringify(errorData)
-      console.error('Evolution API Error Response:', {
-        url,
-        status: response.status,
-        errorData,
-      })
-    } catch {
-      const errorText = await response.text()
-      if (errorText) {
-        errorMessage = errorText
-        console.error('Evolution API Error Text:', {
+    const duration = Date.now() - startTime
+
+    if (!response.ok) {
+      let errorMessage = `HTTP ${response.status}: ${response.statusText}`
+      let errorData: any = null
+      
+      try {
+        errorData = await response.json()
+        errorMessage = JSON.stringify(errorData)
+        log.error(MODULE, `Evolution API Hatası - ${endpoint}`, new Error(errorMessage), {
           url,
           status: response.status,
-          errorText,
+          method: options.method || 'GET',
+          duration,
+          errorData,
+        })
+      } catch {
+        const errorText = await response.text()
+        if (errorText) {
+          errorMessage = errorText
+        }
+        log.error(MODULE, `Evolution API Hatası - ${endpoint}`, new Error(errorMessage), {
+          url,
+          status: response.status,
+          method: options.method || 'GET',
+          duration,
         })
       }
+      throw new Error(`Evolution API error: ${errorMessage}`)
     }
-    throw new Error(`Evolution API error: ${errorMessage}`)
-  }
 
-  return await response.json()
+    log.debug(MODULE, `${options.method || 'GET'} ${endpoint}`, { 
+      status: response.status,
+      duration,
+    })
+
+    return await response.json()
+  } catch (error: any) {
+    const duration = Date.now() - startTime
+    log.error(MODULE, `Evolution request başarısız - ${endpoint}`, error, {
+      url,
+      method: options.method || 'GET',
+      duration,
+    })
+    throw error
+  }
 }
 
 export async function createInstance(instanceName: string): Promise<any> {
-  // Evolution API v2.3.7 format
-  // According to Postman collection, the correct format is:
-  // {
-  //   "instanceName": "instance",
-  //   "qrcode": true,
-  //   "integration": "WHATSAPP-BAILEYS"
-  // }
-  // Note: token parameter is NOT needed
-  return await evolutionRequest<any>('/instance/create', {
-    method: 'POST',
-    body: JSON.stringify({
-      instanceName,
-      qrcode: true,
-      integration: 'WHATSAPP-BAILEYS',
-    }),
-  })
+  log.info(MODULE, `WhatsApp instance oluşturuluyor`, { instanceName })
+  
+  try {
+    const result = await evolutionRequest<any>('/instance/create', {
+      method: 'POST',
+      body: JSON.stringify({
+        instanceName,
+        qrcode: true,
+        integration: 'WHATSAPP-BAILEYS',
+      }),
+    })
+    
+    log.info(MODULE, `Instance başarıyla oluşturuldu`, { instanceName })
+    return result
+  } catch (error) {
+    log.error(MODULE, `Instance oluşturma başarısız`, error, { instanceName })
+    throw error
+  }
 }
 
 export async function getQrCode(instanceName: string): Promise<any> {
-  // Evolution API v2: QR code endpoint
-  // According to v2 docs, use /instance/connect/{instanceName}
-  // This endpoint returns QR code data
-  const response = await evolutionRequest<any>(`/instance/connect/${instanceName}`, {
-    method: 'GET',
-  })
+  log.debug(MODULE, `QR kod alınıyor`, { instanceName })
   
-  // Evolution API v2 response format can be:
-  // { qrcode: { base64: "...", code: "..." } }
-  // or { base64: "...", code: "..." }
-  // or direct QR code object
-  return response
+  try {
+    const response = await evolutionRequest<any>(`/instance/connect/${instanceName}`, {
+      method: 'GET',
+    })
+    
+    log.info(MODULE, `QR kod başarıyla alındı`, { instanceName })
+    return response
+  } catch (error) {
+    log.error(MODULE, `QR kod alınırken hata`, error, { instanceName })
+    throw error
+  }
 }
 
 export async function getConnectionStatus(
   instanceName: string
 ): Promise<any> {
   try {
+    log.debug(MODULE, `Bağlantı durumu kontrol ediliyor`, { instanceName })
+    
     // Evolution API v2: fetch all instances
     const instances = await evolutionRequest<any>(`/instance/fetchInstances`, {
       method: 'GET',
@@ -109,6 +137,7 @@ export async function getConnectionStatus(
       )
       
       if (!found) {
+        log.warn(MODULE, `Instance bulunamadı`, { instanceName })
         return {
           status: 'disconnected',
           instanceName: null,
@@ -123,8 +152,15 @@ export async function getConnectionStatus(
         'connecting': 'pending',
       }
       
+      const status = statusMap[found.connectionStatus] || 'disconnected'
+      log.info(MODULE, `Bağlantı durumu alındı`, { 
+        instanceName, 
+        status,
+        connectionStatus: found.connectionStatus,
+      })
+      
       return {
-        status: statusMap[found.connectionStatus] || 'disconnected',
+        status,
         instanceName: found.name || found.instanceName,
         lastSeenAt: found.updatedAt || found.lastSeenAt,
       }
@@ -133,7 +169,7 @@ export async function getConnectionStatus(
     // Handle single instance response
     return instances
   } catch (error) {
-    console.error('Error fetching connection status:', error)
+    log.error(MODULE, `Bağlantı durumu kontrol edilirken hata`, error, { instanceName })
     // Fallback: return disconnected status
     return {
       status: 'disconnected',
@@ -144,9 +180,18 @@ export async function getConnectionStatus(
 }
 
 export async function resetInstance(instanceName: string): Promise<void> {
-  await evolutionRequest(`/instance/delete/${instanceName}`, {
-    method: 'DELETE',
-  })
+  log.info(MODULE, `Instance sıfırlanıyor`, { instanceName })
+  
+  try {
+    await evolutionRequest(`/instance/delete/${instanceName}`, {
+      method: 'DELETE',
+    })
+    
+    log.info(MODULE, `Instance başarıyla sıfırlandı`, { instanceName })
+  } catch (error) {
+    log.error(MODULE, `Instance sıfırlama başarısız`, error, { instanceName })
+    throw error
+  }
 }
 
 export async function sendTextMessage(
@@ -155,8 +200,14 @@ export async function sendTextMessage(
   text: string
 ): Promise<EvolutionSendMessageResponse> {
   try {
+    log.debug(MODULE, `Mesaj gönderiliyor`, { 
+      instanceName, 
+      number,
+      textLength: text.length,
+    })
+    
     // Evolution API v2 format: text property should be directly in body, not nested in textMessage
-    return await evolutionRequest<EvolutionSendMessageResponse>(
+    const response = await evolutionRequest<EvolutionSendMessageResponse>(
       `/message/sendText/${instanceName}`,
       {
         method: 'POST',
@@ -166,11 +217,21 @@ export async function sendTextMessage(
         }),
       }
     )
-  } catch (error: any) {
-    console.error('Error sending text message:', {
+    
+    log.info(MODULE, `Mesaj başarıyla gönderildi`, {
       instanceName,
       number,
-      error: error.message,
+      textLength: text.length,
+      response: response.key?.id || 'sent',
+    })
+    
+    return response
+  } catch (error: any) {
+    log.error(MODULE, `Mesaj gönderme başarısız`, error, {
+      instanceName,
+      number,
+      textLength: text.length,
+      errorMessage: error.message,
     })
     throw error
   }

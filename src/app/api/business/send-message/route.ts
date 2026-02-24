@@ -9,7 +9,10 @@ import { getBusinessSettings } from '@/lib/db/repositories/business-settings'
 import { createMessageLog } from '@/lib/db/repositories/message-logs'
 import { sendTextMessage } from '@/lib/evolution/client'
 import { getMessageTemplateById, getDefaultMessageTemplate } from '@/lib/db/repositories/message-templates'
+import { log } from '@/lib/logger'
 import { z } from 'zod'
+
+const MODULE = 'SendMessage'
 
 const sendMessageSchema = z.object({
   customerIds: z.array(z.string()),
@@ -35,20 +38,30 @@ async function sleep(ms: number) {
 }
 
 export async function POST(request: Request) {
+  const startTime = Date.now()
+  
   try {
     const user = await getCurrentUser()
     
     if (!user || user.role !== 'business' || !user.businessId) {
+      log.api(MODULE, 'POST', '/api/business/send-message', 401)
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    log.debug(MODULE, `Başlatılan mesaj gönderimi - BusinessID: ${user.businessId}`)
+
     const body = await request.json()
     const { customerIds, templateId } = sendMessageSchema.parse(body)
+    log.debug(MODULE, `İstek parametreleri alındı`, { customerIdCount: customerIds.length, templateId })
 
     // Get WhatsApp connection
     const connection = await getWhatsAppConnectionByBusinessId(user.businessId)
     
     if (!connection || connection.status !== 'connected') {
+      log.warn(MODULE, 'WhatsApp bağlantısı aktif değil', {
+        businessId: user.businessId,
+        status: connection?.status,
+      })
       return NextResponse.json(
         { error: 'WhatsApp not connected' },
         { status: 400 }
@@ -59,6 +72,7 @@ export async function POST(request: Request) {
     const settings = await getBusinessSettings(user.businessId)
     
     if (!settings || !settings.review_url) {
+      log.warn(MODULE, 'Review URL ayarlanmamış', { businessId: user.businessId })
       return NextResponse.json(
         { error: 'Review URL yapılandırılmamış. Lütfen ayarlar sayfasından review URL ekleyin.' },
         { status: 400 }
@@ -74,8 +88,18 @@ export async function POST(request: Request) {
     const customers = allCustomers.filter((c) => customerIds.includes(c.id))
 
     if (customers.length === 0) {
+      log.warn(MODULE, 'Seçili müşteri bulunamadı', {
+        businessId: user.businessId,
+        requestedIds: customerIds.length,
+      })
       return NextResponse.json({ error: 'No customers found' }, { status: 400 })
     }
+
+    log.info(MODULE, `${customers.length} müşteriye mesaj gönderimi başlatıldı`, {
+      businessId: user.businessId,
+      customerCount: customers.length,
+      connection: connection.instance_name,
+    })
 
     // Get message template - prioritize selected template, then default template, then settings template
     let messageTemplate = settings.message_template || 'Merhaba {firstName}, bizimle deneyiminizi değerlendirmek ister misiniz? {reviewUrl}'
@@ -138,11 +162,16 @@ export async function POST(request: Request) {
                 .replace(/{firstName}/g, firstName)
                 .replace(/{reviewUrl}/g, reviewUrl)
 
+              const sendStartTime = Date.now()
+              
               await sendTextMessage(
                 instanceName,
                 customerPhone,
                 message
               )
+              
+              const sendDuration = Date.now() - sendStartTime
+              log.whatsapp(MODULE, `Mesaj gönderildi: ${customerName}`, customerId, sendDuration)
 
               await createMessageLog({
                 business_id: businessId,
@@ -154,9 +183,13 @@ export async function POST(request: Request) {
 
               results.push({ customerId, success: true })
             } catch (error: any) {
-              const errorMessage = error.message || 'Unknown error'
+              const errorMessage = error.message || 'Bilinmeyen hata'
               
-              console.error(`Error sending message to ${customerName}:`, errorMessage)
+              log.error(MODULE, `${customerName} (${customerPhone}) adlı müşteriye mesaj gönderilemedi`, error, {
+                customerId,
+                customerName,
+                customerPhone,
+              })
 
               await createMessageLog({
                 business_id: businessId,
@@ -185,10 +218,27 @@ export async function POST(request: Request) {
 
     const successCount = results.filter((r) => r.success).length
     const failedCount = results.filter((r) => !r.success).length
+    const totalDuration = Date.now() - startTime
+
+    log.info(MODULE, `Mesaj gönderimi tamamlandı`, {
+      businessId: user.businessId,
+      totalCustomers: customers.length,
+      successful: successCount,
+      failed: failedCount,
+      totalDurationMs: totalDuration,
+      averagePerMessage: Math.round(totalDuration / customers.length),
+    })
 
     if (failedCount > 0) {
-      console.error(`Message sending completed: ${successCount} sent, ${failedCount} failed`)
+      const failedCustomers = results.filter((r) => !r.success)
+      log.warn(MODULE, `${failedCount} müşteriye mesaj gönderilemedi`, {
+        businessId: user.businessId,
+        failedCount,
+        sampleErrors: failedCustomers.slice(0, 3).map(r => r.error),
+      })
     }
+
+    log.api(MODULE, 'POST', '/api/business/send-message', 200, totalDuration)
 
     return NextResponse.json({
       success: true,
@@ -198,14 +248,22 @@ export async function POST(request: Request) {
       results,
     })
   } catch (error) {
+    const totalDuration = Date.now() - startTime
+    
     if (error instanceof z.ZodError) {
+      log.warn(MODULE, 'Geçersiz istek verisi', { errors: error.errors })
       return NextResponse.json(
         { error: 'Invalid request data', details: error.errors },
         { status: 400 }
       )
     }
 
-    console.error('Error sending messages:', error)
+    log.error(MODULE, 'Mesaj gönderimi sırasında hata oluştu', error, {
+      totalDurationMs: totalDuration,
+    })
+    
+    log.api(MODULE, 'POST', '/api/business/send-message', 500, totalDuration)
+    
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
