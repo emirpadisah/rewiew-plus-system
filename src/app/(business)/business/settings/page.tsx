@@ -5,8 +5,14 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/hooks/use-toast'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Settings as SettingsIcon, Save, Loader2, Link as LinkIcon, FileText } from 'lucide-react'
 
 export default function SettingsPage() {
@@ -15,9 +21,17 @@ export default function SettingsPage() {
   const [messageTemplate, setMessageTemplate] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [templates, setTemplates] = useState<
+    Array<{ id: string; name: string; template: string; is_default: boolean }>
+  >([])
+  const [selectedTemplateId, setSelectedTemplateId] = useState('')
 
   useEffect(() => {
-    fetchSettings()
+    const init = async () => {
+      const settingsData = await fetchSettings()
+      await fetchTemplates(settingsData?.message_template)
+    }
+    init()
   }, [])
 
   const fetchSettings = async () => {
@@ -27,12 +41,46 @@ export default function SettingsPage() {
       const data = await response.json()
       if (data) {
         setReviewUrl(data.review_url || '')
-        setMessageTemplate(data.message_template || 'Merhaba {firstName}, bizimle deneyiminizi değerlendirmek ister misiniz? {reviewUrl}')
+        setMessageTemplate(
+          data.message_template ||
+            'Merhaba {firstName}, bizimle deneyiminizi değerlendirmek ister misiniz? {reviewUrl}'
+        )
       }
+      return data
     } catch (error) {
       console.error('Error fetching settings:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchTemplates = async (currentTemplate?: string | null) => {
+    try {
+      const response = await fetch('/api/business/message-templates')
+      const data = await response.json()
+      const list = data.templates || []
+
+      setTemplates(list)
+
+      if (!list.length) {
+        return
+      }
+
+      const templateFromSettings = currentTemplate || messageTemplate
+      let selected = templateFromSettings
+        ? list.find((t: any) => t.template === templateFromSettings)
+        : undefined
+
+      if (!selected) {
+        selected = list.find((t: any) => t.is_default) || list[0]
+      }
+
+      if (selected) {
+        setSelectedTemplateId(selected.id)
+        setMessageTemplate(selected.template)
+      }
+    } catch (error) {
+      console.error('Error fetching templates:', error)
     }
   }
 
@@ -148,38 +196,47 @@ export default function SettingsPage() {
                 Mesaj Şablonu
               </CardTitle>
               <CardDescription>
-                Müşterilere gönderilecek mesajın şablonunu özelleştirin
+                Kayıtlı şablonlarınız arasından kullanılacak mesaj şablonunu seçin
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="message-template">Mesaj İçeriği</Label>
-                <Textarea
-                  id="message-template"
-                  value={messageTemplate}
-                  onChange={(e) => setMessageTemplate(e.target.value)}
-                  placeholder="Merhaba {firstName}, bizimle deneyiminizi değerlendirmek ister misiniz? {reviewUrl}"
-                  rows={6}
-                  className="font-mono text-sm"
-                />
-                <div className="space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground">Kullanılabilir değişkenler:</p>
-                  <div className="flex flex-wrap gap-2">
-                    <code className="px-2 py-1 rounded bg-muted text-xs font-mono">
-                      {'{firstName}'}
-                    </code>
-                    <span className="text-xs text-muted-foreground">→ Müşterinin adı</span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <code className="px-2 py-1 rounded bg-muted text-xs font-mono">
-                      {'{reviewUrl}'}
-                    </code>
-                    <span className="text-xs text-muted-foreground">→ Review linki</span>
-                  </div>
-                </div>
+                <Label>Varsayılan Şablon</Label>
+                <Select
+                  value={selectedTemplateId}
+                  onValueChange={(value) => {
+                    setSelectedTemplateId(value)
+                    const selected = templates.find((t) => t.id === value)
+                    if (selected) {
+                      setMessageTemplate(selected.template)
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Bir şablon seçin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {templates.length === 0 ? (
+                      <SelectItem value="no-templates" disabled>
+                        Henüz şablon oluşturulmamış
+                      </SelectItem>
+                    ) : (
+                      templates.map((template) => (
+                        <SelectItem key={template.id} value={template.id}>
+                          {template.name}
+                          {template.is_default ? ' (Varsayılan)' : ''}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Şablonlarınızı `Şablonlar` menüsünden oluşturup düzenleyebilirsiniz.
+                </p>
               </div>
             </CardContent>
           </Card>
+
         </div>
 
         {/* Preview Card */}

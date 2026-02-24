@@ -41,7 +41,7 @@ export default function SendMessagePage() {
   const [sending, setSending] = useState(false)
   const [settings, setSettings] = useState<{ review_platform: string; review_url: string | null; message_template: string | null } | null>(null)
   const [templates, setTemplates] = useState<Array<{ id: string; name: string; template: string; is_default: boolean }>>([])
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('')
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('settings')
 
   useEffect(() => {
     fetchCustomers()
@@ -136,7 +136,7 @@ export default function SendMessagePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           customerIds: Array.from(selectedCustomers),
-          templateId: selectedTemplateId || undefined,
+          templateId: selectedTemplateId === 'settings' ? undefined : selectedTemplateId,
         }),
       })
 
@@ -174,13 +174,17 @@ export default function SendMessagePage() {
   }
 
   const getSelectedTemplate = () => {
+    if (selectedTemplateId === 'settings') {
+      // Use settings template
+      return settings?.message_template || 'Merhaba {firstName}, bizimle deneyiminizi değerlendirmek ister misiniz? {reviewUrl}'
+    }
+    
     if (selectedTemplateId) {
       const template = templates.find(t => t.id === selectedTemplateId)
       if (template) return template.template
     }
-    // Fallback to default template or settings template
-    const defaultTemplate = templates.find(t => t.is_default)
-    if (defaultTemplate) return defaultTemplate.template
+    
+    // Fallback to settings template
     return settings?.message_template || 'Merhaba {firstName}, bizimle deneyiminizi değerlendirmek ister misiniz? {reviewUrl}'
   }
 
@@ -316,7 +320,7 @@ export default function SendMessagePage() {
                           <SelectValue placeholder="Şablon seçin" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Ayarlardan (Varsayılan)</SelectItem>
+                          <SelectItem value="settings">Ayarlardan (Varsayılan)</SelectItem>
                           {templates.map((template) => (
                             <SelectItem key={template.id} value={template.id}>
                               {template.name}
