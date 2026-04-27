@@ -1,9 +1,4 @@
-import {
-  EvolutionInstance,
-  EvolutionQrCode,
-  EvolutionConnectionStatus,
-  EvolutionSendMessageResponse,
-} from './types'
+import { EvolutionSendMessageResponse } from './types'
 import { log } from '@/lib/logger'
 
 const MODULE = 'Evolution/WhatsApp'
@@ -16,17 +11,16 @@ async function evolutionRequest<T>(
 ): Promise<T> {
   const url = `${EVOLUTION_API_URL}${endpoint}`
   const startTime = Date.now()
-  
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options.headers as Record<string, string>),
   }
 
-  // Evolution API v2 uses apikey header (not Authorization)
   if (EVOLUTION_API_KEY) {
-    headers['apikey'] = EVOLUTION_API_KEY
+    headers.apikey = EVOLUTION_API_KEY
   }
-  
+
   try {
     const response = await fetch(url, {
       ...options,
@@ -36,141 +30,109 @@ async function evolutionRequest<T>(
     const duration = Date.now() - startTime
 
     if (!response.ok) {
-      let errorMessage = `HTTP ${response.status}: ${response.statusText}`
-      let errorData: any = null
-      
       try {
-        errorData = await response.json()
-        errorMessage = JSON.stringify(errorData)
-        log.error(MODULE, `Evolution API Hatası - ${endpoint}`, new Error(errorMessage), {
-          url,
-          status: response.status,
-          method: options.method || 'GET',
-          duration,
-          errorData,
-        })
+        await response.json()
       } catch {
-        const errorText = await response.text()
-        if (errorText) {
-          errorMessage = errorText
-        }
-        log.error(MODULE, `Evolution API Hatası - ${endpoint}`, new Error(errorMessage), {
-          url,
-          status: response.status,
-          method: options.method || 'GET',
-          duration,
-        })
+        await response.text()
       }
-      throw new Error(`Evolution API error: ${errorMessage}`)
+
+      log.error(MODULE, 'Evolution API request failed', undefined, {
+        url,
+        endpoint,
+        status: response.status,
+        method: options.method || 'GET',
+        duration,
+      })
+
+      throw new Error('Evolution request failed')
     }
 
-    log.debug(MODULE, `${options.method || 'GET'} ${endpoint}`, { 
+    log.debug(MODULE, `${options.method || 'GET'} ${endpoint}`, {
       status: response.status,
       duration,
     })
 
     return await response.json()
-  } catch (error: any) {
+  } catch (error) {
     const duration = Date.now() - startTime
-    log.error(MODULE, `Evolution request başarısız - ${endpoint}`, error, {
+
+    log.error(MODULE, 'Evolution request failed', error, {
       url,
+      endpoint,
       method: options.method || 'GET',
       duration,
     })
-    throw error
+
+    throw new Error('Evolution request failed')
   }
 }
 
 export async function createInstance(instanceName: string): Promise<any> {
-  log.info(MODULE, `WhatsApp instance oluşturuluyor`, { instanceName })
-  
-  try {
-    const result = await evolutionRequest<any>('/instance/create', {
-      method: 'POST',
-      body: JSON.stringify({
-        instanceName,
-        qrcode: true,
-        integration: 'WHATSAPP-BAILEYS',
-      }),
-    })
-    
-    log.info(MODULE, `Instance başarıyla oluşturuldu`, { instanceName })
-    return result
-  } catch (error) {
-    log.error(MODULE, `Instance oluşturma başarısız`, error, { instanceName })
-    throw error
-  }
+  log.info(MODULE, 'Creating WhatsApp instance', { instanceName })
+
+  const result = await evolutionRequest<any>('/instance/create', {
+    method: 'POST',
+    body: JSON.stringify({
+      instanceName,
+      qrcode: true,
+      integration: 'WHATSAPP-BAILEYS',
+    }),
+  })
+
+  log.info(MODULE, 'WhatsApp instance created', { instanceName })
+  return result
 }
 
 export async function getQrCode(instanceName: string): Promise<any> {
-  log.debug(MODULE, `QR kod alınıyor`, { instanceName })
-  
-  try {
-    const response = await evolutionRequest<any>(`/instance/connect/${instanceName}`, {
-      method: 'GET',
-    })
-    
-    log.info(MODULE, `QR kod başarıyla alındı`, { instanceName })
-    return response
-  } catch (error) {
-    log.error(MODULE, `QR kod alınırken hata`, error, { instanceName })
-    throw error
-  }
+  log.debug(MODULE, 'Fetching QR code', { instanceName })
+
+  const response = await evolutionRequest<any>(`/instance/connect/${instanceName}`, {
+    method: 'GET',
+  })
+
+  log.info(MODULE, 'QR code fetched', { instanceName })
+  return response
 }
 
-export async function getConnectionStatus(
-  instanceName: string
-): Promise<any> {
+export async function getConnectionStatus(instanceName: string): Promise<any> {
   try {
-    log.debug(MODULE, `Bağlantı durumu kontrol ediliyor`, { instanceName })
-    
-    // Evolution API v2: fetch all instances
-    const instances = await evolutionRequest<any>(`/instance/fetchInstances`, {
+    const instances = await evolutionRequest<any>('/instance/fetchInstances', {
       method: 'GET',
     })
-    
-    // Handle array response (v2 format)
+
     if (Array.isArray(instances)) {
-      const found = instances.find((inst: any) => 
-        inst.name === instanceName || 
-        inst.instanceName === instanceName
+      const found = instances.find(
+        (instance: any) =>
+          instance.name === instanceName || instance.instanceName === instanceName
       )
-      
+
       if (!found) {
-        log.warn(MODULE, `Instance bulunamadı`, { instanceName })
         return {
           status: 'disconnected',
           instanceName: null,
           lastSeenAt: null,
         }
       }
-      
-      // Map v2 response format to our expected format
+
       const statusMap: Record<string, string> = {
-        'open': 'connected',
-        'close': 'disconnected',
-        'connecting': 'pending',
+        open: 'connected',
+        close: 'disconnected',
+        connecting: 'pending',
       }
-      
-      const status = statusMap[found.connectionStatus] || 'disconnected'
-      log.info(MODULE, `Bağlantı durumu alındı`, { 
-        instanceName, 
-        status,
-        connectionStatus: found.connectionStatus,
-      })
-      
+
       return {
-        status,
+        status: statusMap[found.connectionStatus] || 'disconnected',
         instanceName: found.name || found.instanceName,
         lastSeenAt: found.updatedAt || found.lastSeenAt,
       }
     }
-    
-    // Handle single instance response
+
     return instances
   } catch (error) {
-    log.error(MODULE, `Bağlantı durumu kontrol edilirken hata`, error, { instanceName })
-    // Fallback: return disconnected status
+    log.warn(MODULE, 'Falling back to disconnected status after Evolution error', {
+      instanceName,
+    })
+
     return {
       status: 'disconnected',
       instanceName: null,
@@ -180,18 +142,13 @@ export async function getConnectionStatus(
 }
 
 export async function resetInstance(instanceName: string): Promise<void> {
-  log.info(MODULE, `Instance sıfırlanıyor`, { instanceName })
-  
-  try {
-    await evolutionRequest(`/instance/delete/${instanceName}`, {
-      method: 'DELETE',
-    })
-    
-    log.info(MODULE, `Instance başarıyla sıfırlandı`, { instanceName })
-  } catch (error) {
-    log.error(MODULE, `Instance sıfırlama başarısız`, error, { instanceName })
-    throw error
-  }
+  log.info(MODULE, 'Resetting WhatsApp instance', { instanceName })
+
+  await evolutionRequest(`/instance/delete/${instanceName}`, {
+    method: 'DELETE',
+  })
+
+  log.info(MODULE, 'WhatsApp instance reset', { instanceName })
 }
 
 export async function sendTextMessage(
@@ -199,41 +156,29 @@ export async function sendTextMessage(
   number: string,
   text: string
 ): Promise<EvolutionSendMessageResponse> {
-  try {
-    log.debug(MODULE, `Mesaj gönderiliyor`, { 
-      instanceName, 
-      number,
-      textLength: text.length,
-    })
-    
-    // Evolution API v2 format: text property should be directly in body, not nested in textMessage
-    const response = await evolutionRequest<EvolutionSendMessageResponse>(
-      `/message/sendText/${instanceName}`,
-      {
-        method: 'POST',
-        body: JSON.stringify({
-          number,
-          text,
-        }),
-      }
-    )
-    
-    log.info(MODULE, `Mesaj başarıyla gönderildi`, {
-      instanceName,
-      number,
-      textLength: text.length,
-      response: response.key?.id || 'sent',
-    })
-    
-    return response
-  } catch (error: any) {
-    log.error(MODULE, `Mesaj gönderme başarısız`, error, {
-      instanceName,
-      number,
-      textLength: text.length,
-      errorMessage: error.message,
-    })
-    throw error
-  }
-}
+  log.debug(MODULE, 'Sending WhatsApp message', {
+    instanceName,
+    number,
+    textLength: text.length,
+  })
 
+  const response = await evolutionRequest<EvolutionSendMessageResponse>(
+    `/message/sendText/${instanceName}`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        number,
+        text,
+      }),
+    }
+  )
+
+  log.info(MODULE, 'WhatsApp message sent', {
+    instanceName,
+    number,
+    textLength: text.length,
+    responseId: response.key?.id || 'sent',
+  })
+
+  return response
+}

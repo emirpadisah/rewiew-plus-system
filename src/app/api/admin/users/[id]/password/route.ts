@@ -1,36 +1,36 @@
-import { NextResponse } from 'next/server'
-import { getCurrentUser } from '@/lib/auth/get-current-user'
 import { getUserById, updateUserPassword } from '@/lib/db/repositories/users'
 import { hashPassword } from '@/lib/auth/password'
+import { requireAdminUser } from '@/lib/auth/guards'
+import { ApiError, handleRouteError } from '@/lib/api/errors'
+import { assertSameOrigin } from '@/lib/api/request'
 import { z } from 'zod'
 
+const MODULE = 'Admin/UserPassword'
+const PATH = '/api/admin/users/[id]/password'
+
 const updatePasswordSchema = z.object({
-  password: z.string().min(6, 'Şifre en az 6 karakter olmalıdır'),
+  password: z.string().min(6, 'Sifre en az 6 karakter olmali'),
 })
 
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const startTime = Date.now()
+
   try {
-    const user = await getCurrentUser()
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    assertSameOrigin(request)
+    await requireAdminUser()
 
     const { id } = await params
     const targetUser = await getUserById(id)
-    
+
     if (!targetUser) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+      throw new ApiError(404, 'User not found', 'USER_NOT_FOUND')
     }
 
-    // Only allow updating business users
     if (targetUser.role !== 'business') {
-      return NextResponse.json(
-        { error: 'Can only update business user passwords' },
-        { status: 403 }
-      )
+      throw new ApiError(403, 'Can only update business user passwords', 'INVALID_TARGET_USER')
     }
 
     const body = await request.json()
@@ -39,23 +39,17 @@ export async function PUT(
     const passwordHash = await hashPassword(password)
     await updateUserPassword(id, passwordHash)
 
-    return NextResponse.json({
+    return Response.json({
       success: true,
       message: 'Password updated successfully',
     })
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Invalid request data', details: error.errors },
-        { status: 400 }
-      )
-    }
-
-    console.error('Error updating password:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return handleRouteError({
+      module: MODULE,
+      method: 'PUT',
+      path: PATH,
+      startTime,
+      error,
+    })
   }
 }
-

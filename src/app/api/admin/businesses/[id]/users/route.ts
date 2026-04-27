@@ -1,41 +1,45 @@
-import { NextResponse } from 'next/server'
-import { getCurrentUser } from '@/lib/auth/get-current-user'
 import { getBusinessById } from '@/lib/db/repositories/businesses'
 import { getUsersByBusinessId } from '@/lib/db/repositories/users'
+import { requireAdminUser } from '@/lib/auth/guards'
+import { ApiError, handleRouteError } from '@/lib/api/errors'
+
+const MODULE = 'Admin/BusinessUsers'
+const PATH = '/api/admin/businesses/[id]/users'
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const startTime = Date.now()
+
   try {
-    const user = await getCurrentUser()
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    await requireAdminUser()
 
     const { id } = await params
     const business = await getBusinessById(id)
-    
+
     if (!business) {
-      return NextResponse.json({ error: 'Business not found' }, { status: 404 })
+      throw new ApiError(404, 'Business not found', 'BUSINESS_NOT_FOUND')
     }
 
     const users = await getUsersByBusinessId(id)
 
-    return NextResponse.json({
-      users: users.map(u => ({
-        id: u.id,
-        email: u.email,
-        role: u.role,
-        business_id: u.business_id,
-        created_at: u.created_at,
+    return Response.json({
+      users: users.map((user) => ({
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        business_id: user.business_id,
+        created_at: user.created_at,
       })),
     })
   } catch (error) {
-    console.error('Error fetching users:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return handleRouteError({
+      module: MODULE,
+      method: 'GET',
+      path: PATH,
+      startTime,
+      error,
+    })
   }
 }

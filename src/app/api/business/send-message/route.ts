@@ -1,226 +1,249 @@
-import { NextResponse } from 'next/server'
-import { getCurrentUser } from '@/lib/auth/get-current-user'
 import {
-  getCustomersByBusinessId,
+  getCustomersByBusinessIdAndIds,
   updateCustomerLastMessageAt,
 } from '@/lib/db/repositories/customers'
 import { getWhatsAppConnectionByBusinessId } from '@/lib/db/repositories/whatsapp-connections'
 import { getBusinessSettings } from '@/lib/db/repositories/business-settings'
 import { createMessageLog } from '@/lib/db/repositories/message-logs'
 import { sendTextMessage } from '@/lib/evolution/client'
-import { getMessageTemplateById, getDefaultMessageTemplate } from '@/lib/db/repositories/message-templates'
+import {
+  getDefaultMessageTemplate,
+  getMessageTemplateById,
+} from '@/lib/db/repositories/message-templates'
+import { getBusinessLimitsSnapshot } from '@/lib/business-limits'
+import { requireBusinessUser } from '@/lib/auth/guards'
+import { ApiError, handleRouteError } from '@/lib/api/errors'
+import { assertSameOrigin } from '@/lib/api/request'
 import { log } from '@/lib/logger'
 import { z } from 'zod'
 
-const MODULE = 'SendMessage'
+const MODULE = 'Business/SendMessage'
+const PATH = '/api/business/send-message'
+const MAX_CONCURRENCY = 2
+const MIN_DELAY_MS = 2000
+const MAX_DELAY_MS = 5000
+const BATCH_DELAY_MS = 10000
 
 const sendMessageSchema = z.object({
-  customerIds: z.array(z.string()),
+  customerIds: z.array(z.string().min(1)).min(1),
   templateId: z.string().optional(),
 })
 
-// Rate limiting configuration - CRITICAL: Prevents account spam/ban
-// These values are carefully chosen to mimic human behavior
-const MAX_CONCURRENCY = 2 // Maximum parallel messages (low to avoid spam detection)
-const MIN_DELAY_MS = 2000 // Minimum delay between messages (2 seconds - safer)
-const MAX_DELAY_MS = 5000 // Maximum delay between messages (5 seconds - safer)
-const BATCH_DELAY_MS = 10000 // Delay between batches (10 seconds)
-
-// Random delay function - CRITICAL: Always use random delays to avoid pattern detection
 function randomDelay() {
-  // Generate random delay between MIN and MAX
-  // This prevents WhatsApp from detecting automated behavior
   return Math.floor(Math.random() * (MAX_DELAY_MS - MIN_DELAY_MS + 1)) + MIN_DELAY_MS
 }
 
-async function sleep(ms: number) {
+function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function createPackageRequiredError(
+  limits: Awaited<ReturnType<typeof getBusinessLimitsSnapshot>>,
+  requested: number
+) {
+  return new ApiError(
+    403,
+    'Paket atanmadan mesaj gonderemezsiniz. Lutfen yoneticinizle iletisime gecin.',
+    'PACKAGE_REQUIRED',
+    {
+      packageTier: limits.packageTier,
+      limit: limits.dailyMessageLimit,
+      used: limits.usedToday,
+      remaining: limits.remainingToday,
+      requested,
+    }
+  )
+}
+
+function createDailyLimitError(
+  limits: Awaited<ReturnType<typeof getBusinessLimitsSnapshot>>,
+  requested: number,
+  message: string
+) {
+  return new ApiError(409, message, 'DAILY_MESSAGE_LIMIT_EXCEEDED', {
+    packageTier: limits.packageTier,
+    limit: limits.dailyMessageLimit,
+    used: limits.usedToday,
+    remaining: limits.remainingToday,
+    requested,
+  })
+}
+
+function getSafeDeliveryErrorMessage(error: unknown) {
+  const rawMessage = error instanceof Error ? error.message.toLowerCase() : ''
+
+  if (rawMessage.includes('number') || rawMessage.includes('phone')) {
+    return 'Gecersiz telefon numarasi'
+  }
+
+  return 'Mesaj gonderilemedi'
 }
 
 export async function POST(request: Request) {
   const startTime = Date.now()
-  
-  try {
-    const user = await getCurrentUser()
-    
-    if (!user || user.role !== 'business' || !user.businessId) {
-      log.api(MODULE, 'POST', '/api/business/send-message', 401)
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
 
-    log.debug(MODULE, `Başlatılan mesaj gönderimi - BusinessID: ${user.businessId}`)
+  try {
+    assertSameOrigin(request)
+    const user = await requireBusinessUser()
+
+    log.debug(MODULE, 'Starting message send request', {
+      businessId: user.businessId,
+    })
 
     const body = await request.json()
     const { customerIds, templateId } = sendMessageSchema.parse(body)
-    log.debug(MODULE, `İstek parametreleri alındı`, { customerIdCount: customerIds.length, templateId })
+    const uniqueCustomerIds = [...new Set(customerIds)]
 
-    // Get WhatsApp connection
+    const limits = await getBusinessLimitsSnapshot(user.businessId)
+
+    if (!limits.packageAssigned) {
+      throw createPackageRequiredError(limits, uniqueCustomerIds.length)
+    }
+
+    if (uniqueCustomerIds.length > limits.remainingToday) {
+      throw createDailyLimitError(
+        limits,
+        uniqueCustomerIds.length,
+        'Gunluk mesaj limitiniz asiliyor. Daha fazla gonderim icin paketinizi yukseltin veya yarini bekleyin.'
+      )
+    }
+
     const connection = await getWhatsAppConnectionByBusinessId(user.businessId)
-    
     if (!connection || connection.status !== 'connected') {
-      log.warn(MODULE, 'WhatsApp bağlantısı aktif değil', {
-        businessId: user.businessId,
-        status: connection?.status,
-      })
-      return NextResponse.json(
-        { error: 'WhatsApp not connected' },
-        { status: 400 }
-      )
+      throw new ApiError(400, 'WhatsApp not connected', 'WHATSAPP_NOT_CONNECTED')
     }
 
-    // Get settings
+    const instanceName = connection.instance_name
+
     const settings = await getBusinessSettings(user.businessId)
-    
-    if (!settings || !settings.review_url) {
-      log.warn(MODULE, 'Review URL ayarlanmamış', { businessId: user.businessId })
-      return NextResponse.json(
-        { error: 'Review URL yapılandırılmamış. Lütfen ayarlar sayfasından review URL ekleyin.' },
-        { status: 400 }
+    if (!settings?.review_url) {
+      throw new ApiError(
+        400,
+        'Review URL yapilandirilmamis. Lutfen ayarlar sayfasindan review URL ekleyin.',
+        'BUSINESS_SETTINGS_INCOMPLETE'
       )
     }
 
-    // Get customers
-    const { data: allCustomers } = await getCustomersByBusinessId(
-      user.businessId,
-      { limit: 10000 }
-    )
-    
-    const customers = allCustomers.filter((c) => customerIds.includes(c.id))
+    const reviewUrl = settings.review_url
+
+    const customers = await getCustomersByBusinessIdAndIds(user.businessId, uniqueCustomerIds)
 
     if (customers.length === 0) {
-      log.warn(MODULE, 'Seçili müşteri bulunamadı', {
-        businessId: user.businessId,
-        requestedIds: customerIds.length,
-      })
-      return NextResponse.json({ error: 'No customers found' }, { status: 400 })
+      throw new ApiError(400, 'No customers found', 'NO_CUSTOMERS_FOUND')
     }
 
-    log.info(MODULE, `${customers.length} müşteriye mesaj gönderimi başlatıldı`, {
+    if (customers.length > limits.remainingToday) {
+      throw createDailyLimitError(
+        limits,
+        customers.length,
+        'Gunluk mesaj limitiniz asiliyor. Secimi azaltip tekrar deneyin.'
+      )
+    }
+
+    log.info(MODULE, 'Message send batch started', {
       businessId: user.businessId,
       customerCount: customers.length,
       connection: connection.instance_name,
     })
 
-    // Get message template - prioritize selected template, then default template, then settings template
-    let messageTemplate = settings.message_template || 'Merhaba {firstName}, bizimle deneyiminizi değerlendirmek ister misiniz? {reviewUrl}'
-    
+    let messageTemplate =
+      settings.message_template ||
+      'Merhaba {firstName}, bizimle deneyiminizi degerlendirmek ister misiniz? {reviewUrl}'
+
     if (templateId) {
       const selectedTemplate = await getMessageTemplateById(templateId)
       if (selectedTemplate && selectedTemplate.business_id === user.businessId) {
         messageTemplate = selectedTemplate.template
       }
     } else {
-      // Try to get default template
       const defaultTemplate = await getDefaultMessageTemplate(user.businessId)
       if (defaultTemplate) {
         messageTemplate = defaultTemplate.template
       }
     }
 
-    // Store values in local constants to avoid TypeScript null check issues in closures
-    const businessId = user.businessId
-    const instanceName = connection.instance_name
-    const reviewUrl = settings.review_url || ''
-
-    // Send messages with rate limiting
     const results: Array<{ customerId: string; success: boolean; error?: string }> = []
     const queue = [...customers]
     let activeCount = 0
+    let processedCount = 0
 
     async function processQueue() {
-      let processedCount = 0
-      
       while (queue.length > 0 || activeCount > 0) {
         if (activeCount < MAX_CONCURRENCY && queue.length > 0) {
           const customer = queue.shift()!
           activeCount++
-          const currentProcessedCount = ++processedCount
+          processedCount += 1
+          const currentProcessedCount = processedCount
 
-          ;(async () => {
-            const customerName = customer.name
-            const customerPhone = customer.phone
-            const customerId = customer.id
-            
+          void (async () => {
             try {
-              // CRITICAL: Always apply random delay before sending
-              // This prevents WhatsApp spam detection
-              // Random delay between 2-5 seconds mimics human behavior
-              const delay = randomDelay()
-              await sleep(delay)
-              
-              // Additional batch delay every 5 messages to avoid rate limits
-              // This prevents sending too many messages in quick succession
-              if (currentProcessedCount % 5 === 0 && currentProcessedCount > 0) {
+              await sleep(randomDelay())
+
+              if (currentProcessedCount % 5 === 0) {
                 await sleep(BATCH_DELAY_MS)
               }
 
-              // Build personalized message using template
-              const firstName = customerName.split(' ')[0]
-              
-              // Replace placeholders
+              const firstName = customer.name.split(' ')[0]
               const message = messageTemplate
                 .replace(/{firstName}/g, firstName)
                 .replace(/{reviewUrl}/g, reviewUrl)
 
               const sendStartTime = Date.now()
-              
-              await sendTextMessage(
-                instanceName,
-                customerPhone,
-                message
+              await sendTextMessage(instanceName, customer.phone, message)
+
+              log.whatsapp(
+                MODULE,
+                `Message sent to ${customer.name}`,
+                customer.id,
+                Date.now() - sendStartTime
               )
-              
-              const sendDuration = Date.now() - sendStartTime
-              log.whatsapp(MODULE, `Mesaj gönderildi: ${customerName}`, customerId, sendDuration)
 
               await createMessageLog({
-                business_id: businessId,
-                customer_id: customerId,
+                business_id: user.businessId,
+                customer_id: customer.id,
                 status: 'sent',
               })
 
-              await updateCustomerLastMessageAt(customerId)
+              await updateCustomerLastMessageAt(customer.id)
+              results.push({ customerId: customer.id, success: true })
+            } catch (error) {
+              const safeErrorMessage = getSafeDeliveryErrorMessage(error)
 
-              results.push({ customerId, success: true })
-            } catch (error: any) {
-              const errorMessage = error.message || 'Bilinmeyen hata'
-              
-              log.error(MODULE, `${customerName} (${customerPhone}) adlı müşteriye mesaj gönderilemedi`, error, {
-                customerId,
-                customerName,
-                customerPhone,
+              log.error(MODULE, 'Message delivery failed', error, {
+                businessId: user.businessId,
+                customerId: customer.id,
+                customerPhone: customer.phone,
               })
 
               await createMessageLog({
-                business_id: businessId,
-                customer_id: customerId,
+                business_id: user.businessId,
+                customer_id: customer.id,
                 status: 'failed',
-                error_message: errorMessage,
+                error_message: safeErrorMessage,
               })
 
               results.push({
-                customerId,
+                customerId: customer.id,
                 success: false,
-                error: errorMessage,
+                error: safeErrorMessage,
               })
             } finally {
               activeCount--
             }
           })()
         } else {
-          // Wait a bit before checking again
           await sleep(100)
         }
       }
     }
-    
+
     await processQueue()
 
-    const successCount = results.filter((r) => r.success).length
-    const failedCount = results.filter((r) => !r.success).length
+    const successCount = results.filter((result) => result.success).length
+    const failedCount = results.filter((result) => !result.success).length
     const totalDuration = Date.now() - startTime
 
-    log.info(MODULE, `Mesaj gönderimi tamamlandı`, {
+    log.info(MODULE, 'Message send batch completed', {
       businessId: user.businessId,
       totalCustomers: customers.length,
       successful: successCount,
@@ -228,19 +251,9 @@ export async function POST(request: Request) {
       totalDurationMs: totalDuration,
       averagePerMessage: Math.round(totalDuration / customers.length),
     })
+    log.api(MODULE, 'POST', PATH, 200, totalDuration)
 
-    if (failedCount > 0) {
-      const failedCustomers = results.filter((r) => !r.success)
-      log.warn(MODULE, `${failedCount} müşteriye mesaj gönderilemedi`, {
-        businessId: user.businessId,
-        failedCount,
-        sampleErrors: failedCustomers.slice(0, 3).map(r => r.error),
-      })
-    }
-
-    log.api(MODULE, 'POST', '/api/business/send-message', 200, totalDuration)
-
-    return NextResponse.json({
+    return Response.json({
       success: true,
       total: results.length,
       sent: successCount,
@@ -248,26 +261,12 @@ export async function POST(request: Request) {
       results,
     })
   } catch (error) {
-    const totalDuration = Date.now() - startTime
-    
-    if (error instanceof z.ZodError) {
-      log.warn(MODULE, 'Geçersiz istek verisi', { errors: error.errors })
-      return NextResponse.json(
-        { error: 'Invalid request data', details: error.errors },
-        { status: 400 }
-      )
-    }
-
-    log.error(MODULE, 'Mesaj gönderimi sırasında hata oluştu', error, {
-      totalDurationMs: totalDuration,
+    return handleRouteError({
+      module: MODULE,
+      method: 'POST',
+      path: PATH,
+      startTime,
+      error,
     })
-    
-    log.api(MODULE, 'POST', '/api/business/send-message', 500, totalDuration)
-    
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
   }
 }
-

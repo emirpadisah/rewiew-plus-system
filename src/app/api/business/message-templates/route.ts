@@ -1,10 +1,14 @@
-import { NextResponse } from 'next/server'
-import { getCurrentUser } from '@/lib/auth/get-current-user'
 import {
-  getMessageTemplatesByBusinessId,
   createMessageTemplate,
+  getMessageTemplatesByBusinessId,
 } from '@/lib/db/repositories/message-templates'
+import { requireBusinessUser } from '@/lib/auth/guards'
+import { assertSameOrigin } from '@/lib/api/request'
+import { handleRouteError } from '@/lib/api/errors'
 import { z } from 'zod'
+
+const MODULE = 'Business/MessageTemplates'
+const PATH = '/api/business/message-templates'
 
 const createTemplateSchema = z.object({
   name: z.string().min(1, 'Template name is required'),
@@ -13,29 +17,30 @@ const createTemplateSchema = z.object({
 })
 
 export async function GET() {
-  try {
-    const user = await getCurrentUser()
-    if (!user || user.role !== 'business' || !user.businessId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  const startTime = Date.now()
 
+  try {
+    const user = await requireBusinessUser()
     const templates = await getMessageTemplatesByBusinessId(user.businessId)
-    return NextResponse.json({ templates })
+
+    return Response.json({ templates })
   } catch (error) {
-    console.error('Error fetching templates:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return handleRouteError({
+      module: MODULE,
+      method: 'GET',
+      path: PATH,
+      startTime,
+      error,
+    })
   }
 }
 
 export async function POST(request: Request) {
+  const startTime = Date.now()
+
   try {
-    const user = await getCurrentUser()
-    if (!user || user.role !== 'business' || !user.businessId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    assertSameOrigin(request)
+    const user = await requireBusinessUser()
 
     const body = await request.json()
     const data = createTemplateSchema.parse(body)
@@ -45,20 +50,14 @@ export async function POST(request: Request) {
       business_id: user.businessId,
     })
 
-    return NextResponse.json(template, { status: 201 })
+    return Response.json(template, { status: 201 })
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Invalid request data', details: error.errors },
-        { status: 400 }
-      )
-    }
-
-    console.error('Error creating template:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return handleRouteError({
+      module: MODULE,
+      method: 'POST',
+      path: PATH,
+      startTime,
+      error,
+    })
   }
 }
-

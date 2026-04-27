@@ -2,6 +2,8 @@ export type UserRole = 'admin' | 'business'
 
 export type BusinessStatus = 'active' | 'passive'
 
+export type BusinessPackage = 'starter' | 'standard' | 'pro'
+
 export type WhatsAppConnectionStatus = 'connected' | 'disconnected' | 'pending'
 
 export type MessageLogStatus = 'sent' | 'failed'
@@ -19,6 +21,7 @@ export interface Business {
   id: string
   name: string
   status: BusinessStatus
+  package_tier: BusinessPackage | null
   created_at: string
   last_payment_at: string | null
   next_renewal_at: string | null
@@ -69,6 +72,18 @@ export interface BusinessSettings {
   review_platform: ReviewPlatform
   review_url: string | null
   message_template: string | null
+}
+
+export interface BusinessLimitsSnapshot {
+  packageAssigned: boolean
+  packageTier: BusinessPackage | null
+  packageName: string | null
+  customerLimit: number
+  currentCustomerCount: number
+  remainingCustomerSlots: number
+  dailyMessageLimit: number
+  usedToday: number
+  remainingToday: number
 }
 
 export interface MessageTemplate {

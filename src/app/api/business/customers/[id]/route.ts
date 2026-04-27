@@ -1,7 +1,11 @@
-import { NextResponse } from 'next/server'
-import { getCurrentUser } from '@/lib/auth/get-current-user'
-import { updateCustomer, getCustomerById } from '@/lib/db/repositories/customers'
+import { getCustomerById, updateCustomer } from '@/lib/db/repositories/customers'
+import { requireBusinessUser } from '@/lib/auth/guards'
+import { ApiError, handleRouteError } from '@/lib/api/errors'
+import { assertSameOrigin } from '@/lib/api/request'
 import { z } from 'zod'
+
+const MODULE = 'Business/CustomerDetail'
+const PATH = '/api/business/customers/[id]'
 
 const updateCustomerSchema = z.object({
   notes: z.string().nullable().optional(),
@@ -12,20 +16,19 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const startTime = Date.now()
+
   try {
-    const user = await getCurrentUser()
-    if (!user || user.role !== 'business' || !user.businessId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    assertSameOrigin(request)
+    const user = await requireBusinessUser()
 
     const { id } = await params
     const body = await request.json()
     const data = updateCustomerSchema.parse(body)
 
-    // Verify customer belongs to business
     const customer = await getCustomerById(id)
     if (!customer || customer.business_id !== user.businessId) {
-      return NextResponse.json({ error: 'Customer not found' }, { status: 404 })
+      throw new ApiError(404, 'Customer not found', 'CUSTOMER_NOT_FOUND')
     }
 
     const updated = await updateCustomer(id, {
@@ -33,20 +36,14 @@ export async function PATCH(
       category: data.category !== undefined ? data.category : undefined,
     })
 
-    return NextResponse.json(updated)
+    return Response.json(updated)
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Invalid request data', details: error.errors },
-        { status: 400 }
-      )
-    }
-
-    console.error('Error updating customer:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return handleRouteError({
+      module: MODULE,
+      method: 'PATCH',
+      path: PATH,
+      startTime,
+      error,
+    })
   }
 }
-

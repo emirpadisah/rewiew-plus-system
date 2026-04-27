@@ -1,23 +1,25 @@
-import { NextResponse } from 'next/server'
-import { getCurrentUser } from '@/lib/auth/get-current-user'
 import { getMessageStatsByAllBusinesses } from '@/lib/db/repositories/message-logs'
+import { requireAdminUser } from '@/lib/auth/guards'
+import { handleRouteError } from '@/lib/api/errors'
+
+const MODULE = 'Admin/MessageStats'
+const PATH = '/api/admin/message-stats'
 
 export async function GET() {
+  const startTime = Date.now()
+
   try {
-    const user = await getCurrentUser()
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    await requireAdminUser()
 
     const stats = await getMessageStatsByAllBusinesses()
-
-    return NextResponse.json({ stats })
+    return Response.json({ stats })
   } catch (error) {
-    console.error('Error fetching message stats:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return handleRouteError({
+      module: MODULE,
+      method: 'GET',
+      path: PATH,
+      startTime,
+      error,
+    })
   }
 }
-

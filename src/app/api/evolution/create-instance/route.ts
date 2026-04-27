@@ -1,94 +1,98 @@
-import { NextResponse } from 'next/server'
-import { getCurrentUser } from '@/lib/auth/get-current-user'
 import { createInstance, getQrCode } from '@/lib/evolution/client'
 import {
   createWhatsAppConnection,
   getWhatsAppConnectionByBusinessId,
 } from '@/lib/db/repositories/whatsapp-connections'
+import { requireBusinessUser } from '@/lib/auth/guards'
+import { ApiError, handleRouteError } from '@/lib/api/errors'
+import { assertSameOrigin } from '@/lib/api/request'
+import { log } from '@/lib/logger'
+
+const MODULE = 'Evolution/CreateInstance'
+const PATH = '/api/evolution/create-instance'
+
+function normalizeQrCodeResponse(payload: any) {
+  if (!payload) {
+    return null
+  }
+
+  if (payload.qrcode) {
+    return payload.qrcode
+  }
+
+  if (payload.base64) {
+    return {
+      base64: payload.base64.startsWith('data:')
+        ? payload.base64
+        : `data:image/png;base64,${payload.base64}`,
+      code: payload.code,
+    }
+  }
+
+  if (payload.code) {
+    return {
+      code: payload.code,
+      base64: payload.base64,
+    }
+  }
+
+  return payload
+}
 
 export async function POST(request: Request) {
-  try {
-    const user = await getCurrentUser()
-    if (!user || user.role !== 'business' || !user.businessId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  const startTime = Date.now()
 
-    // Check if connection already exists
+  try {
+    assertSameOrigin(request)
+    const user = await requireBusinessUser()
+
     const existing = await getWhatsAppConnectionByBusinessId(user.businessId)
     if (existing) {
-      return NextResponse.json(
-        { error: 'Connection already exists' },
-        { status: 400 }
-      )
+      throw new ApiError(400, 'Connection already exists', 'CONNECTION_ALREADY_EXISTS')
     }
 
     const instanceName = `business_${user.businessId.replace(/-/g, '_')}`
 
-    // Create instance in Evolution API
-    const instance = await createInstance(instanceName)
+    let instance: any
+    try {
+      instance = await createInstance(instanceName)
+    } catch (error) {
+      throw new ApiError(502, 'Evolution service unavailable', 'EVOLUTION_UNAVAILABLE')
+    }
 
-    // Save to database
     await createWhatsAppConnection({
       business_id: user.businessId,
       instance_name: instanceName,
       status: 'pending',
     })
 
-    // Evolution API v2: QR code might not be in create response
-    // Need to fetch it separately via connect endpoint
-    let qrcode = null
-    
-    // Check if QR code is in create response first
-    if (instance.qrcode) {
-      qrcode = instance.qrcode
-    } else if (instance.base64) {
-      qrcode = {
-        base64: instance.base64.startsWith('data:') ? instance.base64 : `data:image/png;base64,${instance.base64}`,
-        code: instance.code,
-      }
-    }
-    
-    // If not in create response, try to fetch it
+    let qrcode = normalizeQrCodeResponse(instance)
+
     if (!qrcode) {
       try {
-        // Wait a bit longer for instance to be ready in production
-        await new Promise(resolve => setTimeout(resolve, 2000))
-        const qrResponse = await getQrCode(instanceName)
-        
-        if (qrResponse) {
-          if (qrResponse.qrcode) {
-            qrcode = qrResponse.qrcode
-          } else if (qrResponse.base64) {
-            qrcode = {
-              base64: qrResponse.base64.startsWith('data:') ? qrResponse.base64 : `data:image/png;base64,${qrResponse.base64}`,
-              code: qrResponse.code,
-            }
-          } else if (qrResponse.code) {
-            qrcode = {
-              code: qrResponse.code,
-              base64: qrResponse.base64,
-            }
-          }
-        }
-      } catch (error: any) {
-        // QR code will be fetched later via frontend polling
-        console.error('QR code not available immediately, will be fetched via polling:', error.message)
+        await new Promise((resolve) => setTimeout(resolve, 2000))
+        qrcode = normalizeQrCodeResponse(await getQrCode(instanceName))
+      } catch (error) {
+        log.warn(MODULE, 'QR code not ready yet; frontend can continue polling', {
+          businessId: user.businessId,
+          instanceName,
+        })
       }
     }
 
-    return NextResponse.json({ 
-      instanceName, 
-      qrcode
+    log.api(MODULE, 'POST', PATH, 200, Date.now() - startTime)
+
+    return Response.json({
+      instanceName,
+      qrcode,
     })
-  } catch (error: any) {
-    console.error('Error creating instance:', error.message)
-    return NextResponse.json(
-      { 
-        error: error.message || 'Internal server error',
-        details: error.message?.includes('Evolution API') ? error.message : undefined
-      },
-      { status: 500 }
-    )
+  } catch (error) {
+    return handleRouteError({
+      module: MODULE,
+      method: 'POST',
+      path: PATH,
+      startTime,
+      error,
+    })
   }
 }
-

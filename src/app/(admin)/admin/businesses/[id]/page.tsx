@@ -31,7 +31,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { useToast } from '@/hooks/use-toast'
-import { Business, WhatsAppConnection, User } from '@/types'
+import { Business, BusinessPackage, WhatsAppConnection, User } from '@/types'
+import { BUSINESS_PACKAGES } from '@/lib/business-packages'
 import { 
   Building2, 
   Users, 
@@ -39,7 +40,9 @@ import {
   Key, 
   Loader2,
   CheckCircle2,
-  XCircle
+  XCircle,
+  AlertTriangle,
+  Package
 } from 'lucide-react'
 
 export default function BusinessDetailPage() {
@@ -250,6 +253,33 @@ export default function BusinessDetailPage() {
     setPasswordDialogOpen(true)
   }
 
+  const handleUpdatePackage = async (packageTier: BusinessPackage) => {
+    setUpdating(true)
+    try {
+      const response = await fetch(`/api/admin/businesses/${params.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ package_tier: packageTier }),
+      })
+
+      if (!response.ok) throw new Error('Failed to update package')
+
+      toast({
+        title: 'Başarılı',
+        description: 'Paket güncellendi',
+      })
+      fetchBusiness()
+    } catch (error) {
+      toast({
+        title: 'Hata',
+        description: 'Paket güncellenirken bir hata oluştu',
+        variant: 'destructive',
+      })
+    } finally {
+      setUpdating(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -274,6 +304,10 @@ export default function BusinessDetailPage() {
       </div>
     )
   }
+
+  const selectedPackage = business.package_tier
+    ? BUSINESS_PACKAGES[business.package_tier]
+    : null
 
   return (
     <div className="space-y-6">
@@ -354,6 +388,52 @@ export default function BusinessDetailPage() {
                 }
                 className="mt-2"
               />
+            </div>
+
+            <div className="space-y-3 rounded-lg border p-4">
+              <div className="flex items-center gap-2">
+                <Package className="h-4 w-4 text-primary" />
+                <Label>Paket</Label>
+              </div>
+
+              {!selectedPackage && (
+                <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span>Bu işletmeye henüz paket atanmadı. Paket atanmadan müşteri ekleme ve mesaj gönderme kapalı kalır.</span>
+                  </div>
+                </div>
+              )}
+
+              <Select
+                value={business.package_tier || undefined}
+                onValueChange={(value) => handleUpdatePackage(value as BusinessPackage)}
+                disabled={updating}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Paket seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="starter">Başlangıç</SelectItem>
+                  <SelectItem value="standard">Standart</SelectItem>
+                  <SelectItem value="pro">Pro</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-md bg-muted/50 p-3">
+                  <div className="text-xs text-muted-foreground">Müşteri limiti</div>
+                  <div className="text-lg font-semibold">
+                    {selectedPackage ? selectedPackage.customerLimit.toLocaleString('tr-TR') : '-'}
+                  </div>
+                </div>
+                <div className="rounded-md bg-muted/50 p-3">
+                  <div className="text-xs text-muted-foreground">Günlük mesaj limiti</div>
+                  <div className="text-lg font-semibold">
+                    {selectedPackage ? selectedPackage.dailyMessageLimit.toLocaleString('tr-TR') : '-'}
+                  </div>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>

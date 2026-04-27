@@ -1,10 +1,14 @@
-import { NextResponse } from 'next/server'
-import { getCurrentUser } from '@/lib/auth/get-current-user'
 import {
   getBusinessSettings,
   upsertBusinessSettings,
 } from '@/lib/db/repositories/business-settings'
+import { requireBusinessUser } from '@/lib/auth/guards'
+import { assertSameOrigin } from '@/lib/api/request'
+import { handleRouteError } from '@/lib/api/errors'
 import { z } from 'zod'
+
+const MODULE = 'Business/Settings'
+const PATH = '/api/business/settings'
 
 const updateSettingsSchema = z.object({
   review_platform: z.enum(['google', 'tripadvisor', 'custom']).optional(),
@@ -13,70 +17,78 @@ const updateSettingsSchema = z.object({
     .nullable()
     .optional()
     .refine(
-      (val) => {
-        if (!val || val.trim() === '') return true // Allow empty string
+      (value) => {
+        if (!value || value.trim() === '') {
+          return true
+        }
+
         try {
-          new URL(val.trim())
+          new URL(value.trim())
           return true
         } catch {
           return false
         }
       },
-      { message: 'Geçerli bir URL girin' }
+      { message: 'Gecerli bir URL girin' }
     )
-    .transform((val) => (val && val.trim() ? val.trim() : null)),
+    .transform((value) => (value && value.trim() ? value.trim() : null)),
   message_template: z.string().nullable().optional(),
 })
 
 export async function GET() {
-  try {
-    const user = await getCurrentUser()
-    if (!user || user.role !== 'business' || !user.businessId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  const startTime = Date.now()
 
+  try {
+    const user = await requireBusinessUser()
     const settings = await getBusinessSettings(user.businessId)
-    return NextResponse.json(settings || null)
+
+    return Response.json(settings || null)
   } catch (error) {
-    console.error('Error fetching settings:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return handleRouteError({
+      module: MODULE,
+      method: 'GET',
+      path: PATH,
+      startTime,
+      error,
+    })
   }
 }
 
 export async function PUT(request: Request) {
-  try {
-    const user = await getCurrentUser()
-    if (!user || user.role !== 'business' || !user.businessId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  const startTime = Date.now()
 
+  try {
+    assertSameOrigin(request)
+    const user = await requireBusinessUser()
+
+    const currentSettings = await getBusinessSettings(user.businessId)
     const body = await request.json()
     const data = updateSettingsSchema.parse(body)
 
     const settings = await upsertBusinessSettings({
       business_id: user.businessId,
-      review_platform: data.review_platform || 'custom',
-      review_url: data.review_url || null,
-      message_template: data.message_template || null,
+      review_platform:
+        data.review_platform ??
+        currentSettings?.review_platform ??
+        'custom',
+      review_url:
+        data.review_url !== undefined
+          ? data.review_url
+          : currentSettings?.review_url ?? null,
+      message_template:
+        data.message_template !== undefined
+          ? data.message_template
+          : currentSettings?.message_template ?? null,
     })
 
-    return NextResponse.json(settings)
+    return Response.json(settings)
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Invalid request data', details: error.errors },
-        { status: 400 }
-      )
-    }
-
-    console.error('Error updating settings:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return handleRouteError({
+      module: MODULE,
+      method: 'PUT',
+      path: PATH,
+      startTime,
+      error,
+    })
   }
 }
-

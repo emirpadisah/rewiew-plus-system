@@ -1,5 +1,6 @@
 import { supabase } from '../supabase'
 import { MessageLog, MessageLogStatus } from '@/types'
+import { getTimeZoneDateKey } from '@/lib/timezone'
 
 export async function createMessageLog(data: {
   business_id: string
@@ -39,12 +40,10 @@ export async function getMessageLogsByBusinessId(
     query = query.eq('status', params.status)
   }
 
-  if (params?.limit) {
-    query = query.limit(params.limit)
-  }
-
-  if (params?.offset) {
-    query = query.range(params.offset, params.offset + (params.limit || 10) - 1)
+  if (params?.limit !== undefined) {
+    const limit = params.limit
+    const offset = params.offset ?? 0
+    query = query.range(offset, offset + limit - 1)
   }
 
   query = query.order('created_at', { ascending: false })
@@ -53,6 +52,61 @@ export async function getMessageLogsByBusinessId(
 
   if (error) throw error
   return { data: data || [], count: count || 0 }
+}
+
+export async function getMessageLogsWithCustomersByBusinessId(
+  businessId: string,
+  params?: {
+    status?: MessageLogStatus
+    limit?: number
+    offset?: number
+  }
+): Promise<{
+  data: Array<{
+    id: string
+    customer_id: string
+    status: MessageLogStatus
+    customer_name: string
+    customer_phone: string
+    created_at: string
+    error_message: string | null
+  }>
+  count: number
+}> {
+  const { data: logs, count } = await getMessageLogsByBusinessId(businessId, params)
+
+  if (logs.length === 0) {
+    return {
+      data: [],
+      count: count || 0,
+    }
+  }
+
+  const customerIds = [...new Set(logs.map((log) => log.customer_id))]
+  const { data: customers, error } = await supabase
+    .from('customers')
+    .select('id, name, phone')
+    .eq('business_id', businessId)
+    .in('id', customerIds)
+
+  if (error) throw error
+
+  const customerMap = new Map(
+    (customers || []).map((customer) => [customer.id, customer])
+  )
+
+  return {
+    data: logs.map((log) => ({
+      id: log.id,
+      customer_id: log.customer_id,
+      status: log.status,
+      customer_name: customerMap.get(log.customer_id)?.name || 'Bilinmeyen',
+      customer_phone: customerMap.get(log.customer_id)?.phone || '',
+      created_at: log.created_at,
+      error_message: log.error_message,
+    })),
+    count: count || 0,
+  }
 }
 
 export async function getMessageStatsByBusinessId(businessId: string): Promise<{
@@ -100,10 +154,6 @@ export async function getTotalMessageCount(): Promise<number> {
   return count || 0
 }
 
-/**
- * Get message statistics for all businesses
- * Returns array of businesses with their message stats
- */
 export async function getMessageStatsByAllBusinesses(): Promise<Array<{
   business_id: string
   business_name: string
@@ -113,105 +163,39 @@ export async function getMessageStatsByAllBusinesses(): Promise<Array<{
   success_rate: number
   last_message_at: string | null
 }>> {
-  // Get all message logs grouped by business
-  const { data: logs, error: logsError } = await supabase
-    .from('message_logs')
-    .select('business_id, status, created_at')
-    .order('created_at', { ascending: false })
+  const { data, error } = await supabase.rpc('get_message_stats_by_business')
 
-  if (logsError) throw logsError
+  if (error) throw error
 
-  // Get all businesses
-  const { data: businesses, error: businessesError } = await supabase
-    .from('businesses')
-    .select('id, name')
-
-  if (businessesError) throw businessesError
-
-  // Create business map
-  const businessMap = new Map(
-    (businesses || []).map(b => [b.id, b.name])
-  )
-
-  // Group logs by business_id
-  const statsMap = new Map<string, {
-    total: number
-    sent: number
-    failed: number
-    last_message_at: string | null
-  }>()
-
-  logs?.forEach((log) => {
-    const existing = statsMap.get(log.business_id) || {
-      total: 0,
-      sent: 0,
-      failed: 0,
-      last_message_at: null,
-    }
-
-    existing.total++
-    if (log.status === 'sent') {
-      existing.sent++
-    } else {
-      existing.failed++
-    }
-
-    // Track latest message date
-    if (!existing.last_message_at || log.created_at > existing.last_message_at) {
-      existing.last_message_at = log.created_at
-    }
-
-    statsMap.set(log.business_id, existing)
-  })
-
-  // Convert to array and calculate success rate
-  return Array.from(statsMap.entries()).map(([business_id, stats]) => ({
-    business_id,
-    business_name: businessMap.get(business_id) || 'Bilinmeyen İşletme',
-    total: stats.total,
-    sent: stats.sent,
-    failed: stats.failed,
-    success_rate: stats.total > 0 ? Math.round((stats.sent / stats.total) * 100) : 0,
-    last_message_at: stats.last_message_at,
-  })).sort((a, b) => b.total - a.total) // Sort by total messages descending
+  return (data || []).map((row: any) => ({
+    business_id: row.business_id,
+    business_name: row.business_name,
+    total: Number(row.total || 0),
+    sent: Number(row.sent || 0),
+    failed: Number(row.failed || 0),
+    success_rate: Number(row.success_rate || 0),
+    last_message_at: row.last_message_at,
+  }))
 }
 
 export async function getRecentMessageLogsWithCustomers(
   businessId: string,
   limit: number = 10
 ): Promise<Array<MessageLog & { customer_name: string; customer_phone: string }>> {
-  // Get recent message logs
-  const { data: logs, error: logsError } = await supabase
-    .from('message_logs')
-    .select('*')
-    .eq('business_id', businessId)
-    .order('created_at', { ascending: false })
-    .limit(limit)
+  const result = await getMessageLogsWithCustomersByBusinessId(businessId, {
+    limit,
+    offset: 0,
+  })
 
-  if (logsError) throw logsError
-  if (!logs || logs.length === 0) return []
-
-  // Get customer IDs
-  const customerIds = [...new Set(logs.map(log => log.customer_id))]
-
-  // Get customers
-  const { data: customers, error: customersError } = await supabase
-    .from('customers')
-    .select('id, name, phone')
-    .in('id', customerIds)
-
-  if (customersError) throw customersError
-
-  // Create customer map
-  const customerMap = new Map(
-    (customers || []).map(c => [c.id, { name: c.name, phone: c.phone }])
-  )
-
-  // Combine logs with customer info
-  return logs.map(log => ({
-    ...log,
-    customer_name: customerMap.get(log.customer_id)?.name || 'Bilinmeyen',
-    customer_phone: customerMap.get(log.customer_id)?.phone || '',
+  return result.data.map((log) => ({
+    id: log.id,
+    business_id: businessId,
+    customer_id: log.customer_id,
+    status: log.status,
+    error_message: log.error_message,
+    created_at: log.created_at,
+    customer_name: log.customer_name,
+    customer_phone: log.customer_phone,
   }))
 }
 
@@ -229,15 +213,14 @@ export async function getMessageStatsByDateRange(
     .select('status, created_at')
     .eq('business_id', businessId)
     .gte('created_at', startDate)
-    .lte('created_at', endDate)
+    .lt('created_at', endDate)
 
   if (error) throw error
 
-  // Group by date
   const grouped: Record<string, { sent: number; failed: number }> = {}
-  
+
   data?.forEach((log) => {
-    const date = new Date(log.created_at).toISOString().split('T')[0]
+    const date = getTimeZoneDateKey(new Date(log.created_at))
     if (!grouped[date]) {
       grouped[date] = { sent: 0, failed: 0 }
     }
@@ -252,4 +235,21 @@ export async function getMessageStatsByDateRange(
     date,
     ...stats,
   }))
+}
+
+export async function countMessageLogsByBusinessIdInRange(
+  businessId: string,
+  startDate: string,
+  endDate: string
+): Promise<number> {
+  const { count, error } = await supabase
+    .from('message_logs')
+    .select('*', { count: 'exact', head: true })
+    .eq('business_id', businessId)
+    .gte('created_at', startDate)
+    .lt('created_at', endDate)
+
+  if (error) throw error
+
+  return count || 0
 }

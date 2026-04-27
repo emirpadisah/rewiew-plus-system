@@ -1,5 +1,5 @@
 import { supabase } from '../supabase'
-import { Business, BusinessStatus } from '@/types'
+import { Business, BusinessPackage, BusinessStatus } from '@/types'
 
 export async function createBusiness(data: {
   name: string
@@ -50,12 +50,10 @@ export async function getAllBusinesses(params?: {
     query = query.eq('status', params.status)
   }
 
-  if (params?.limit) {
-    query = query.limit(params.limit)
-  }
-
-  if (params?.offset) {
-    query = query.range(params.offset, params.offset + (params.limit || 10) - 1)
+  if (params?.limit !== undefined) {
+    const limit = params.limit
+    const offset = params.offset ?? 0
+    query = query.range(offset, offset + limit - 1)
   }
 
   query = query.order('created_at', { ascending: false })
@@ -71,6 +69,7 @@ export async function updateBusiness(
   updates: {
     name?: string
     status?: BusinessStatus
+    package_tier?: BusinessPackage | null
     last_payment_at?: string | null
     next_renewal_at?: string | null
     notes?: string | null
@@ -85,6 +84,17 @@ export async function updateBusiness(
 
   if (error) throw error
   return data
+}
+
+export async function getRecentBusinesses(limit: number = 5): Promise<Business[]> {
+  const { data, error } = await supabase
+    .from('businesses')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (error) throw error
+  return data || []
 }
 
 export async function getBusinessStats(): Promise<{

@@ -23,7 +23,8 @@ import {
 } from '@/components/ui/dialog'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
-import { Customer } from '@/types'
+import { BusinessLimitsSnapshot, Customer } from '@/types'
+import { MAX_CUSTOMER_PACKAGE_LIMIT } from '@/lib/business-packages'
 import Papa from 'papaparse'
 import { 
   Users, 
@@ -52,6 +53,7 @@ import {
 export default function CustomersPage() {
   const { toast } = useToast()
   const [customers, setCustomers] = useState<Customer[]>([])
+  const [limits, setLimits] = useState<BusinessLimitsSnapshot | null>(null)
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
@@ -73,13 +75,14 @@ export default function CustomersPage() {
 
   useEffect(() => {
     fetchCustomers()
+    fetchLimits()
   }, [])
 
   const fetchCustomers = async () => {
     setLoading(true)
     try {
       const response = await fetch(
-        `/api/business/customers?limit=1000&offset=0${search ? `&search=${encodeURIComponent(search)}` : ''}`
+        `/api/business/customers?limit=${MAX_CUSTOMER_PACKAGE_LIMIT}&offset=0${search ? `&search=${encodeURIComponent(search)}` : ''}`
       )
       const data = await response.json()
       setCustomers(data.data || [])
@@ -94,6 +97,40 @@ export default function CustomersPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const fetchLimits = async () => {
+    try {
+      const response = await fetch('/api/business/limits')
+      if (!response.ok) {
+        throw new Error('Failed to fetch limits')
+      }
+
+      const data = await response.json()
+      setLimits(data)
+    } catch (error) {
+      console.error('Error fetching limits:', error)
+    }
+  }
+
+  const getApiErrorMessage = (data: any, fallback: string) => {
+    if (!data?.error) {
+      return fallback
+    }
+
+    const details: string[] = []
+
+    if (typeof data.used === 'number' && typeof data.limit === 'number') {
+      details.push(`Kullanım: ${data.used}/${data.limit}`)
+    }
+
+    if (typeof data.remaining === 'number') {
+      details.push(`Kalan: ${data.remaining}`)
+    }
+
+    return details.length > 0
+      ? `${data.error} (${details.join(', ')})`
+      : data.error
   }
 
   // Get unique categories from customers
@@ -156,7 +193,7 @@ export default function CustomersPage() {
 
       if (!response.ok) {
         const data = await response.json()
-        throw new Error(data.error || 'Failed to create customer')
+        throw new Error(getApiErrorMessage(data, 'Failed to create customer'))
       }
 
       toast({
@@ -167,6 +204,7 @@ export default function CustomersPage() {
       setName('')
       setPhone('')
       fetchCustomers()
+      fetchLimits()
     } catch (error: any) {
       toast({
         title: 'Hata',
@@ -234,7 +272,7 @@ export default function CustomersPage() {
 
             if (!response.ok) {
               const data = await response.json()
-              throw new Error(data.error || 'Failed to upload customers')
+              throw new Error(getApiErrorMessage(data, 'Failed to upload customers'))
             }
 
             toast({
@@ -244,6 +282,7 @@ export default function CustomersPage() {
             setCsvDialogOpen(false)
             setCsvFile(null)
             fetchCustomers()
+            fetchLimits()
           } catch (error: any) {
             toast({
               title: 'Hata',
@@ -317,6 +356,10 @@ export default function CustomersPage() {
     }
   }
 
+  const customerCreationBlocked = Boolean(
+    limits && (!limits.packageAssigned || limits.remainingCustomerSlots === 0)
+  )
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -330,7 +373,7 @@ export default function CustomersPage() {
         <div className="flex flex-col sm:flex-row gap-2">
           <Dialog open={csvDialogOpen} onOpenChange={setCsvDialogOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" className="gap-2">
+              <Button variant="outline" className="gap-2" disabled={customerCreationBlocked}>
                 <Upload className="h-4 w-4" />
                 <span className="hidden sm:inline">CSV Yükle</span>
                 <span className="sm:hidden">CSV</span>
@@ -361,7 +404,7 @@ export default function CustomersPage() {
                 <Button variant="outline" onClick={() => setCsvDialogOpen(false)}>
                   İptal
                 </Button>
-                <Button onClick={handleCsvUpload} disabled={creating || !csvFile} className="gap-2">
+                <Button onClick={handleCsvUpload} disabled={creating || !csvFile || customerCreationBlocked} className="gap-2">
                   {creating ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -380,7 +423,7 @@ export default function CustomersPage() {
 
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="gap-2">
+              <Button className="gap-2" disabled={customerCreationBlocked}>
                 <Plus className="h-4 w-4" />
                 <span className="hidden sm:inline">Yeni Müşteri</span>
                 <span className="sm:hidden">Yeni</span>
@@ -423,7 +466,7 @@ export default function CustomersPage() {
                 <Button variant="outline" onClick={() => setDialogOpen(false)}>
                   İptal
                 </Button>
-                <Button onClick={handleCreateCustomer} disabled={creating} className="gap-2">
+                <Button onClick={handleCreateCustomer} disabled={creating || customerCreationBlocked} className="gap-2">
                   {creating ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -507,6 +550,40 @@ export default function CustomersPage() {
           </Dialog>
         </div>
       </div>
+
+      {limits && (
+        <Card className={!limits.packageAssigned ? 'border-amber-200 bg-amber-50/60' : undefined}>
+          <CardContent className="pt-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <div className="text-sm font-medium">
+                  {limits.packageAssigned ? `${limits.packageName} paketi` : 'Paket atanmadı'}
+                </div>
+                <div className="mt-1 text-sm text-muted-foreground">
+                  {limits.packageAssigned
+                    ? `Mevcut müşteri kullanımınız ${limits.currentCustomerCount.toLocaleString('tr-TR')} / ${limits.customerLimit.toLocaleString('tr-TR')}.`
+                    : 'Yönetici paket atayana kadar yeni müşteri ekleme ve CSV yükleme kapalı kalır.'}
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-md border bg-background p-3">
+                  <div className="text-xs text-muted-foreground">Müşteri kullanımı</div>
+                  <div className={`text-lg font-semibold ${limits.packageAssigned && limits.currentCustomerCount > limits.customerLimit ? 'text-red-600' : ''}`}>
+                    {limits.currentCustomerCount.toLocaleString('tr-TR')} / {limits.customerLimit.toLocaleString('tr-TR')}
+                  </div>
+                </div>
+                <div className="rounded-md border bg-background p-3">
+                  <div className="text-xs text-muted-foreground">Kalan slot</div>
+                  <div className="text-lg font-semibold">
+                    {limits.remainingCustomerSlots.toLocaleString('tr-TR')}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Search and Filters */}
       <Card>

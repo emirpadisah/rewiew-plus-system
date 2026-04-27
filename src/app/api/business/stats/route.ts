@@ -1,66 +1,66 @@
-import { NextResponse } from 'next/server'
-import { getCurrentUser } from '@/lib/auth/get-current-user'
-import { 
+import {
   getMessageStatsByBusinessId,
   getRecentMessageLogsWithCustomers,
   getMessageStatsByDateRange,
 } from '@/lib/db/repositories/message-logs'
 import { getWhatsAppConnectionByBusinessId } from '@/lib/db/repositories/whatsapp-connections'
-import { getCustomersByBusinessId } from '@/lib/db/repositories/customers'
+import { countCustomersByBusinessId } from '@/lib/db/repositories/customers'
+import { requireBusinessUser } from '@/lib/auth/guards'
+import { handleRouteError } from '@/lib/api/errors'
 import { log } from '@/lib/logger'
+import { getTimeZoneDayRange } from '@/lib/timezone'
 
 const MODULE = 'Business/Stats'
+const PATH = '/api/business/stats'
 
 export async function GET() {
   const startTime = Date.now()
-  
+
   try {
-    const user = await getCurrentUser()
-    if (!user || user.role !== 'business' || !user.businessId) {
-      log.api(MODULE, 'GET', '/api/business/stats', 401)
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const user = await requireBusinessUser()
 
-    log.debug(MODULE, 'İstatistikler çekiliyor başlatıldı', { businessId: user.businessId })
+    log.debug(MODULE, 'Fetching business statistics', { businessId: user.businessId })
 
-    // Get today and last 7 days for stats
-    const today = new Date()
-    const sevenDaysAgo = new Date(today)
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-    
-    const [messageStats, whatsappConnection, recentLogs, customerCount, dailyStats] = await Promise.all([
-      getMessageStatsByBusinessId(user.businessId),
-      getWhatsAppConnectionByBusinessId(user.businessId),
-      getRecentMessageLogsWithCustomers(user.businessId, 10),
-      getCustomersByBusinessId(user.businessId, { limit: 1 }),
-      getMessageStatsByDateRange(
-        user.businessId,
-        sevenDaysAgo.toISOString(),
-        today.toISOString()
-      ),
-    ])
+    const todayRange = getTimeZoneDayRange()
+    const sevenDaysAgoStart = new Date(
+      new Date(todayRange.start).getTime() - 6 * 24 * 60 * 60 * 1000
+    )
 
-    // Calculate success rate
-    const successRate = messageStats.total > 0 
-      ? Math.round((messageStats.sent / messageStats.total) * 100) 
-      : 0
+    const [messageStats, whatsappConnection, recentLogs, customerCount, dailyStats] =
+      await Promise.all([
+        getMessageStatsByBusinessId(user.businessId),
+        getWhatsAppConnectionByBusinessId(user.businessId),
+        getRecentMessageLogsWithCustomers(user.businessId, 10),
+        countCustomersByBusinessId(user.businessId),
+        getMessageStatsByDateRange(
+          user.businessId,
+          sevenDaysAgoStart.toISOString(),
+          todayRange.endExclusive
+        ),
+      ])
 
-    // Calculate today's stats
-    const todayStr = today.toISOString().split('T')[0]
-    const todayStats = dailyStats.find(s => s.date === todayStr) || { sent: 0, failed: 0 }
+    const successRate =
+      messageStats.total > 0
+        ? Math.round((messageStats.sent / messageStats.total) * 100)
+        : 0
 
-    log.info(MODULE, 'İstatistikler başarıyla çekildi', {
+    const todayStats =
+      dailyStats.find((stats) => stats.date === todayRange.dateKey) || {
+        sent: 0,
+        failed: 0,
+      }
+
+    log.info(MODULE, 'Business statistics fetched', {
       businessId: user.businessId,
       totalMessages: messageStats.total,
       successRate,
       whatsappStatus: whatsappConnection?.status,
-      totalCustomers: customerCount.count,
+      totalCustomers: customerCount,
       durationMs: Date.now() - startTime,
     })
+    log.api(MODULE, 'GET', PATH, 200, Date.now() - startTime)
 
-    log.api(MODULE, 'GET', '/api/business/stats', 200, Date.now() - startTime)
-
-    return NextResponse.json({
+    return Response.json({
       messages: {
         ...messageStats,
         successRate,
@@ -71,20 +71,18 @@ export async function GET() {
         lastSeenAt: whatsappConnection?.last_seen_at,
       },
       customers: {
-        total: customerCount.count,
+        total: customerCount,
       },
       recentLogs: recentLogs.slice(0, 10),
-      dailyStats: dailyStats.slice(-7), // Last 7 days
+      dailyStats: dailyStats.slice(-7),
     })
   } catch (error) {
-    const duration = Date.now() - startTime
-    log.error(MODULE, 'İstatistikler çekilirken hata oluştu', error, { durationMs: duration })
-    log.api(MODULE, 'GET', '/api/business/stats', 500, duration)
-    
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return handleRouteError({
+      module: MODULE,
+      method: 'GET',
+      path: PATH,
+      startTime,
+      error,
+    })
   }
 }
-

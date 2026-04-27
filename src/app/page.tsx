@@ -1,10 +1,8 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { 
   MessageSquare, 
   Users, 
@@ -13,9 +11,7 @@ import {
   Zap, 
   CheckCircle2,
   Mail,
-  Phone,
-  Instagram,
-  ArrowRight
+  Instagram
 } from 'lucide-react'
 
 // Animation hook for scroll-triggered animations
@@ -149,8 +145,6 @@ function AnimatedCounter({
 }
 
 export default function Home() {
-  const router = useRouter()
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50 overflow-hidden">
       {/* Animated Background Gradient */}
@@ -182,17 +176,6 @@ export default function Home() {
               Tripadvisor'da görünürlüğünüzü artırın ve işletmenizin online itibarını güçlendirin.
             </p>
             <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center animate-fade-in-up" style={{ animationDelay: '400ms' }}>
-              <Button 
-                size="lg" 
-                className="text-lg px-8 py-6 group relative overflow-hidden"
-                onClick={() => router.push('/auth/login')}
-              >
-                <span className="relative z-10 flex items-center gap-2">
-                  Giriş Yap
-                  <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
-                </span>
-                <span className="absolute inset-0 bg-primary/90 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-300"></span>
-              </Button>
               <Button 
                 size="lg" 
                 variant="outline" 
@@ -319,23 +302,12 @@ export default function Home() {
         <AnimatedSection>
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-              Hemen Başlayın
+              Bizimle İletişime Geçin
             </h2>
             <p className="mt-4 text-lg text-gray-600">
-              Hesabınız varsa giriş yapın, yoksa bizimle iletişime geçin
+              Demo, kurulum ve detaylar için bize e-posta gönderin
             </p>
             <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
-                size="lg" 
-                className="text-lg px-8 py-6 group relative overflow-hidden"
-                onClick={() => router.push('/auth/login')}
-              >
-                <span className="relative z-10 flex items-center gap-2">
-                  Giriş Yap
-                  <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
-                </span>
-                <span className="absolute inset-0 bg-primary/90 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-300"></span>
-              </Button>
               <Button 
                 size="lg" 
                 variant="outline" 
@@ -355,7 +327,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="bg-gray-900 text-gray-400 py-12 relative">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <AnimatedSection delay={0}>
               <div>
                 <h3 className="text-white font-semibold mb-4">YorumUp</h3>
@@ -394,22 +366,6 @@ export default function Home() {
                     <Instagram className="h-4 w-4 group-hover:scale-110 transition-transform" />
                     @yorumup.comm
                   </a>
-                </div>
-              </div>
-            </AnimatedSection>
-            <AnimatedSection delay={200}>
-              <div>
-                <h3 className="text-white font-semibold mb-4">Hızlı Erişim</h3>
-                <div className="space-y-2 text-sm">
-                  <Link 
-                    href="/auth/login" 
-                    className="block hover:text-white transition-colors group"
-                  >
-                    <span className="flex items-center gap-2">
-                      Giriş Yap
-                      <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
-                    </span>
-                  </Link>
                 </div>
               </div>
             </AnimatedSection>

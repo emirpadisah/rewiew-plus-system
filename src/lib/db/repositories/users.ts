@@ -1,5 +1,6 @@
 import { supabase } from '../supabase'
 import { User, UserRole } from '@/types'
+import { normalizeEmail } from '@/lib/api/request'
 
 export async function createUser(data: {
   email: string
@@ -7,10 +8,12 @@ export async function createUser(data: {
   role: UserRole
   business_id?: string | null
 }): Promise<User> {
+  const normalizedEmail = normalizeEmail(data.email)
+
   const { data: user, error } = await supabase
     .from('users')
     .insert({
-      email: data.email,
+      email: normalizedEmail,
       password_hash: data.password_hash,
       role: data.role,
       business_id: data.business_id || null,
@@ -23,14 +26,15 @@ export async function createUser(data: {
 }
 
 export async function getUserByEmail(email: string): Promise<User | null> {
+  const normalizedEmail = normalizeEmail(email)
+
   const { data, error } = await supabase
     .from('users')
     .select('*')
-    .eq('email', email)
-    .single()
+    .ilike('email', normalizedEmail)
+    .maybeSingle()
 
   if (error) {
-    if (error.code === 'PGRST116') return null
     throw error
   }
   return data

@@ -1,5 +1,6 @@
 import { supabase } from '../supabase'
 import { Customer } from '@/types'
+import { escapeLikePattern, normalizeSearchTerm } from '@/lib/api/request'
 
 export async function createCustomer(data: {
   business_id: string
@@ -32,6 +33,16 @@ export async function createCustomersBulk(
   return data || []
 }
 
+export async function countCustomersByBusinessId(businessId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from('customers')
+    .select('*', { count: 'exact', head: true })
+    .eq('business_id', businessId)
+
+  if (error) throw error
+  return count || 0
+}
+
 export async function getCustomersByBusinessId(
   businessId: string,
   params?: {
@@ -46,15 +57,18 @@ export async function getCustomersByBusinessId(
     .eq('business_id', businessId)
 
   if (params?.search) {
-    query = query.or(`name.ilike.%${params.search}%,phone.ilike.%${params.search}%`)
+    const normalizedSearch = normalizeSearchTerm(params.search)
+
+    if (normalizedSearch) {
+      const escapedSearch = escapeLikePattern(normalizedSearch)
+      query = query.or(`name.ilike.%${escapedSearch}%,phone.ilike.%${escapedSearch}%`)
+    }
   }
 
-  if (params?.limit) {
-    query = query.limit(params.limit)
-  }
-
-  if (params?.offset) {
-    query = query.range(params.offset, params.offset + (params.limit || 10) - 1)
+  if (params?.limit !== undefined) {
+    const limit = params.limit
+    const offset = params.offset ?? 0
+    query = query.range(offset, offset + limit - 1)
   }
 
   query = query.order('created_at', { ascending: false })
@@ -63,6 +77,24 @@ export async function getCustomersByBusinessId(
 
   if (error) throw error
   return { data: data || [], count: count || 0 }
+}
+
+export async function getCustomersByBusinessIdAndIds(
+  businessId: string,
+  customerIds: string[]
+): Promise<Customer[]> {
+  if (customerIds.length === 0) {
+    return []
+  }
+
+  const { data, error } = await supabase
+    .from('customers')
+    .select('*')
+    .eq('business_id', businessId)
+    .in('id', customerIds)
+
+  if (error) throw error
+  return data || []
 }
 
 export async function getCustomerById(id: string): Promise<Customer | null> {

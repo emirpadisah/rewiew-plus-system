@@ -1,26 +1,29 @@
-import { NextResponse } from 'next/server'
-import { getCurrentUser } from '@/lib/auth/get-current-user'
 import { getBusinessById } from '@/lib/db/repositories/businesses'
+import { requireBusinessUser } from '@/lib/auth/guards'
+import { ApiError, handleRouteError } from '@/lib/api/errors'
+
+const MODULE = 'Business/Info'
+const PATH = '/api/business/info'
 
 export async function GET() {
+  const startTime = Date.now()
+
   try {
-    const user = await getCurrentUser()
-    if (!user || user.role !== 'business' || !user.businessId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
+    const user = await requireBusinessUser()
     const business = await getBusinessById(user.businessId)
+
     if (!business) {
-      return NextResponse.json({ error: 'Business not found' }, { status: 404 })
+      throw new ApiError(404, 'Business not found', 'BUSINESS_NOT_FOUND')
     }
 
-    return NextResponse.json({ name: business.name })
+    return Response.json({ name: business.name })
   } catch (error) {
-    console.error('Error fetching business info:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return handleRouteError({
+      module: MODULE,
+      method: 'GET',
+      path: PATH,
+      startTime,
+      error,
+    })
   }
 }
-

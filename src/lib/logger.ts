@@ -1,6 +1,5 @@
 /**
- * Logger Utility - Merkezi Loglama Sistemi
- * Tüm uygulamada tutarlı hata, uyarı, ve bilgi logları için
+ * Logger Utility - centralized application logging
  */
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error'
@@ -10,7 +9,7 @@ export interface LogEntry {
   level: LogLevel
   module: string
   message: string
-  details?: any
+  details?: unknown
   error?: {
     name: string
     message: string
@@ -20,65 +19,144 @@ export interface LogEntry {
   requestId?: string
 }
 
+const REDACTED = '[REDACTED]'
+
+function maskEmail(value: string) {
+  const [localPart, domain = ''] = value.split('@')
+
+  if (!localPart || !domain) {
+    return REDACTED
+  }
+
+  const visible = localPart.slice(0, 2)
+  return `${visible}${'*'.repeat(Math.max(localPart.length - visible.length, 1))}@${domain}`
+}
+
+function maskPhone(value: string) {
+  const digits = value.replace(/\D/g, '')
+
+  if (digits.length < 4) {
+    return REDACTED
+  }
+
+  return `${'*'.repeat(Math.max(digits.length - 4, 1))}${digits.slice(-4)}`
+}
+
+function isSensitiveKey(key: string) {
+  const normalizedKey = key.toLowerCase()
+
+  return [
+    'password',
+    'password_hash',
+    'token',
+    'authorization',
+    'cookie',
+    'secret',
+    'apikey',
+    'api_key',
+    'qrcode',
+    'base64',
+    'pairingcode',
+    'pairing_code',
+    'message_template',
+    'template',
+    'text',
+  ].some((candidate) => normalizedKey.includes(candidate))
+}
+
+function sanitizeValue(value: unknown, key?: string): unknown {
+  if (value == null) {
+    return value
+  }
+
+  if (typeof value === 'string') {
+    const normalizedKey = key?.toLowerCase() || ''
+
+    if (isSensitiveKey(normalizedKey)) {
+      return REDACTED
+    }
+
+    if (normalizedKey.includes('email')) {
+      return maskEmail(value)
+    }
+
+    if (
+      normalizedKey.includes('phone') ||
+      normalizedKey === 'number' ||
+      normalizedKey.includes('ip')
+    ) {
+      return maskPhone(value)
+    }
+
+    if (value.startsWith('data:') || value.length > 500) {
+      return REDACTED
+    }
+
+    return value
+  }
+
+  if (Array.isArray(value)) {
+    return value.slice(0, 20).map((entry) => sanitizeValue(entry))
+  }
+
+  if (typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([entryKey, entryValue]) => [
+        entryKey,
+        sanitizeValue(entryValue, entryKey),
+      ])
+    )
+  }
+
+  return value
+}
+
 class Logger {
   private isDevelopment = process.env.NODE_ENV === 'development'
   private enableRemoteLogging = process.env.NEXT_PUBLIC_ENABLE_REMOTE_LOGGING === 'true'
 
-  /**
-   * Hata mesajı logla
-   */
-  error(module: string, message: string, error?: any, details?: any) {
+  error(module: string, message: string, error?: unknown, details?: unknown) {
     const logEntry = this.formatLog('error', module, message, error, details)
     this.output('error', logEntry)
-    
+
     if (this.enableRemoteLogging) {
-      this.sendToRemote(logEntry)
+      void this.sendToRemote(logEntry)
     }
   }
 
-  /**
-   * Uyarı mesajı logla
-   */
-  warn(module: string, message: string, details?: any) {
+  warn(module: string, message: string, details?: unknown) {
     const logEntry = this.formatLog('warn', module, message, undefined, details)
     this.output('warn', logEntry)
   }
 
-  /**
-   * Bilgi mesajı logla
-   */
-  info(module: string, message: string, details?: any) {
+  info(module: string, message: string, details?: unknown) {
     const logEntry = this.formatLog('info', module, message, undefined, details)
     this.output('info', logEntry)
   }
 
-  /**
-   * Debug mesajı logla (sadece development'ta)
-   */
-  debug(module: string, message: string, details?: any) {
-    if (!this.isDevelopment) return
-    
+  debug(module: string, message: string, details?: unknown) {
+    if (!this.isDevelopment) {
+      return
+    }
+
     const logEntry = this.formatLog('debug', module, message, undefined, details)
     this.output('debug', logEntry)
   }
 
-  /**
-   * API işlemi loglaması
-   */
   logApiCall(
     module: string,
     method: string,
     endpoint: string,
     status?: number,
     duration?: number,
-    error?: any
+    error?: unknown
   ) {
     const message = `${method} ${endpoint}`
     const details = {
       method,
       endpoint,
-      ...(status && { status }),
-      ...(duration && { duration: `${duration}ms` }),
+      ...(status ? { status } : {}),
+      ...(duration ? { duration: `${duration}ms` } : {}),
     }
 
     if (error) {
@@ -88,21 +166,18 @@ class Logger {
     }
   }
 
-  /**
-   * Veritabanı işlemi loglaması
-   */
   logDatabase(
     module: string,
     operation: string,
     table: string,
     duration?: number,
-    error?: any
+    error?: unknown
   ) {
     const message = `[DB] ${operation} on ${table}`
     const details = {
       operation,
       table,
-      ...(duration && { duration: `${duration}ms` }),
+      ...(duration ? { duration: `${duration}ms` } : {}),
     }
 
     if (error) {
@@ -112,21 +187,18 @@ class Logger {
     }
   }
 
-  /**
-   * WhatsApp işlemi loglaması
-   */
   logWhatsApp(
     module: string,
     action: string,
     customerId?: string,
     duration?: number,
-    error?: any
+    error?: unknown
   ) {
     const message = `[WhatsApp] ${action}`
     const details = {
       action,
-      ...(customerId && { customerId }),
-      ...(duration && { duration: `${duration}ms` }),
+      ...(customerId ? { customerId } : {}),
+      ...(duration ? { duration: `${duration}ms` } : {}),
     }
 
     if (error) {
@@ -136,14 +208,11 @@ class Logger {
     }
   }
 
-  /**
-   * Kimlik doğrulama loglaması
-   */
-  logAuth(module: string, action: string, userId?: string, error?: any) {
+  logAuth(module: string, action: string, userId?: string, error?: unknown) {
     const message = `[AUTH] ${action}`
     const details = {
       action,
-      ...(userId && { userId }),
+      ...(userId ? { userId } : {}),
     }
 
     if (error) {
@@ -153,21 +222,20 @@ class Logger {
     }
   }
 
-  /**
-   * Hata detaylarını format et
-   */
   private formatLog(
     level: LogLevel,
     module: string,
     message: string,
-    error?: any,
-    details?: any
+    error?: unknown,
+    details?: unknown
   ): LogEntry {
-    const errorInfo = error
+    const errorObject = error as { name?: string; message?: string; stack?: string } | undefined
+    const errorInfo = errorObject
       ? {
-          name: error.name || 'Error',
-          message: error.message || String(error),
-          stack: this.isDevelopment ? error.stack : undefined,
+          name: errorObject.name || 'Error',
+          message:
+            typeof errorObject.message === 'string' ? errorObject.message : String(errorObject),
+          stack: this.isDevelopment ? errorObject.stack : undefined,
         }
       : undefined
 
@@ -176,14 +244,11 @@ class Logger {
       level,
       module,
       message,
-      ...(details && { details }),
-      ...(errorInfo && { error: errorInfo }),
+      ...(details ? { details: sanitizeValue(details) } : {}),
+      ...(errorInfo ? { error: sanitizeValue(errorInfo) as LogEntry['error'] } : {}),
     }
   }
 
-  /**
-   * Console'a çıktı ver
-   */
   private output(level: LogLevel, entry: LogEntry) {
     const prefix = this.getPrefix(level)
     const logString = this.formatLogString(entry)
@@ -207,22 +272,17 @@ class Logger {
     }
   }
 
-  /**
-   * Log seviyesi ön eki
-   */
   private getPrefix(level: LogLevel): string {
     const prefixes: Record<LogLevel, string> = {
-      debug: '🔍',
-      info: 'ℹ️',
-      warn: '⚠️',
-      error: '❌',
+      debug: '[DEBUG]',
+      info: '[INFO]',
+      warn: '[WARN]',
+      error: '[ERROR]',
     }
+
     return prefixes[level]
   }
 
-  /**
-   * Log string'ini format et
-   */
   private formatLogString(entry: LogEntry): string {
     let result = `[${entry.timestamp}] [${entry.module}] ${entry.message}`
 
@@ -237,34 +297,25 @@ class Logger {
     return result
   }
 
-  /**
-   * Remote logging servisine gönder
-   */
   private async sendToRemote(entry: LogEntry) {
     try {
-      // Bu endpoint'i backend'e ekleyebilirsiniz
-      // await fetch('/api/logs', { method: 'POST', body: JSON.stringify(entry) })
+      void entry
     } catch (error) {
-      // Silent fail - remote logging başarısız olursa uygulamayı etkilemesin
       console.error('Remote logging failed:', error)
     }
   }
 }
 
-// Singleton instance
 export const logger = new Logger()
 
-/**
- * Hızlı logger helper'lar - direkt import için
- */
 export const log = {
-  error: (module: string, message: string, error?: any, details?: any) =>
+  error: (module: string, message: string, error?: unknown, details?: unknown) =>
     logger.error(module, message, error, details),
-  warn: (module: string, message: string, details?: any) =>
+  warn: (module: string, message: string, details?: unknown) =>
     logger.warn(module, message, details),
-  info: (module: string, message: string, details?: any) =>
+  info: (module: string, message: string, details?: unknown) =>
     logger.info(module, message, details),
-  debug: (module: string, message: string, details?: any) =>
+  debug: (module: string, message: string, details?: unknown) =>
     logger.debug(module, message, details),
   api: logger.logApiCall.bind(logger),
   db: logger.logDatabase.bind(logger),
