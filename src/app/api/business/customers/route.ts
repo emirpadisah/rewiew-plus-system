@@ -3,6 +3,7 @@ import {
   createCustomersBulk,
   getCustomersByBusinessId,
 } from '@/lib/db/repositories/customers'
+import { MAX_CUSTOMER_PACKAGE_LIMIT } from '@/lib/business-packages'
 import { getBusinessLimitsSnapshot } from '@/lib/business-limits'
 import { requireBusinessUser } from '@/lib/auth/guards'
 import { ApiError, handleRouteError } from '@/lib/api/errors'
@@ -58,7 +59,7 @@ export async function GET(request: Request) {
     const user = await requireBusinessUser()
     const { search, limit, offset } = parseListQuery(request, {
       defaultLimit: 10,
-      maxLimit: 100,
+      maxLimit: MAX_CUSTOMER_PACKAGE_LIMIT,
       maxSearchLength: 100,
     })
 

@@ -85,6 +85,11 @@ export default function CustomersPage() {
         `/api/business/customers?limit=${MAX_CUSTOMER_PACKAGE_LIMIT}&offset=0${search ? `&search=${encodeURIComponent(search)}` : ''}`
       )
       const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(getApiErrorMessage(data, 'Failed to fetch customers'))
+      }
+
       setCustomers(data.data || [])
       setTotal(data.count || 0)
     } catch (error) {
