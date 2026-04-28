@@ -140,3 +140,42 @@ export async function updateCustomer(
   return data
 }
 
+export async function updateCustomersCategory(
+  businessId: string,
+  customerIds: string[],
+  category: string | null
+): Promise<Customer[]> {
+  if (customerIds.length === 0) {
+    return []
+  }
+
+  const { data, error } = await supabase
+    .from('customers')
+    .update({ category })
+    .eq('business_id', businessId)
+    .in('id', customerIds)
+    .select()
+
+  if (error) throw error
+  return data || []
+}
+
+export async function deleteCustomersByBusinessId(
+  businessId: string,
+  customerIds: string[]
+): Promise<number> {
+  if (customerIds.length === 0) {
+    return 0
+  }
+
+  const { data, error } = await supabase
+    .from('customers')
+    .delete()
+    .eq('business_id', businessId)
+    .in('id', customerIds)
+    .select('id')
+
+  if (error) throw error
+  return data?.length || 0
+}
+

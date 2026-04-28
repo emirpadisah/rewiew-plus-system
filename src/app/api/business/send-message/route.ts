@@ -19,10 +19,10 @@ import { z } from 'zod'
 
 const MODULE = 'Business/SendMessage'
 const PATH = '/api/business/send-message'
-const MAX_CONCURRENCY = 2
-const MIN_DELAY_MS = 2000
-const MAX_DELAY_MS = 5000
-const BATCH_DELAY_MS = 10000
+const MAX_CONCURRENCY = 1
+const MIN_DELAY_MS = 8000
+const MAX_DELAY_MS = 18000
+const BATCH_DELAY_MS = 60000
 
 const sendMessageSchema = z.object({
   customerIds: z.array(z.string().min(1)).min(1),

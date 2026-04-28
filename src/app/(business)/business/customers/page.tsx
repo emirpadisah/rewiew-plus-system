@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Table,
   TableBody,
@@ -39,7 +40,8 @@ import {
   Edit,
   Tag,
   StickyNote,
-  Filter
+  Filter,
+  Trash2
 } from 'lucide-react'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -70,6 +72,12 @@ export default function CustomersPage() {
   const [customerCategory, setCustomerCategory] = useState('')
   const [updating, setUpdating] = useState(false)
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
+  const [selectedCustomerIds, setSelectedCustomerIds] = useState<Set<string>>(new Set())
+  const [bulkCategoryDialogOpen, setBulkCategoryDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [bulkCategory, setBulkCategory] = useState('')
+  const [bulkUpdating, setBulkUpdating] = useState(false)
+  const [bulkDeleting, setBulkDeleting] = useState(false)
 
   const limit = 10
 
@@ -90,7 +98,19 @@ export default function CustomersPage() {
         throw new Error(getApiErrorMessage(data, 'Failed to fetch customers'))
       }
 
-      setCustomers(data.data || [])
+      const nextCustomers = data.data || []
+      const nextCustomerIds = new Set(nextCustomers.map((customer: Customer) => customer.id))
+
+      setCustomers(nextCustomers)
+      setSelectedCustomerIds((previous) => {
+        const nextSelected = new Set<string>()
+        previous.forEach((id) => {
+          if (nextCustomerIds.has(id)) {
+            nextSelected.add(id)
+          }
+        })
+        return nextSelected
+      })
       setTotal(data.count || 0)
     } catch (error) {
       console.error('Error fetching customers:', error)
@@ -168,6 +188,62 @@ export default function CustomersPage() {
     page * limit
   )
   const filteredTotal = filteredCustomers.length
+  const selectedCount = selectedCustomerIds.size
+  const selectedCustomers = customers.filter((customer) => selectedCustomerIds.has(customer.id))
+  const visibleCustomerIds = paginatedCustomers.map((customer) => customer.id)
+  const allVisibleSelected = visibleCustomerIds.length > 0
+    && visibleCustomerIds.every((id) => selectedCustomerIds.has(id))
+  const someVisibleSelected = visibleCustomerIds.some((id) => selectedCustomerIds.has(id))
+  const allFilteredSelected = filteredCustomers.length > 0
+    && filteredCustomers.every((customer) => selectedCustomerIds.has(customer.id))
+
+  const handleToggleVisibleCustomers = () => {
+    setSelectedCustomerIds((previous) => {
+      const nextSelected = new Set(previous)
+
+      if (allVisibleSelected) {
+        visibleCustomerIds.forEach((id) => nextSelected.delete(id))
+      } else {
+        visibleCustomerIds.forEach((id) => nextSelected.add(id))
+      }
+
+      return nextSelected
+    })
+  }
+
+  const handleToggleCustomer = (customerId: string) => {
+    setSelectedCustomerIds((previous) => {
+      const nextSelected = new Set(previous)
+
+      if (nextSelected.has(customerId)) {
+        nextSelected.delete(customerId)
+      } else {
+        nextSelected.add(customerId)
+      }
+
+      return nextSelected
+    })
+  }
+
+  const handleSelectFilteredCustomers = () => {
+    const filteredCustomerIds = filteredCustomers.map((customer) => customer.id)
+
+    setSelectedCustomerIds((previous) => {
+      const nextSelected = new Set(previous)
+
+      if (allFilteredSelected) {
+        filteredCustomerIds.forEach((id) => nextSelected.delete(id))
+      } else {
+        filteredCustomerIds.forEach((id) => nextSelected.add(id))
+      }
+
+      return nextSelected
+    })
+  }
+
+  const handleClearSelection = () => {
+    setSelectedCustomerIds(new Set())
+  }
 
   const handleCreateCustomer = async () => {
     if (!name.trim() || !phone.trim()) {
@@ -358,6 +434,98 @@ export default function CustomersPage() {
       })
     } finally {
       setUpdating(false)
+    }
+  }
+
+  const handleOpenBulkCategoryDialog = () => {
+    if (selectedCount === 0) {
+      toast({
+        title: 'Hata',
+        description: 'En az bir müşteri seçin',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    const selectedCategories = Array.from(
+      new Set(selectedCustomers.map((customer) => customer.category || ''))
+    )
+
+    setBulkCategory(selectedCategories.length === 1 ? selectedCategories[0] : '')
+    setBulkCategoryDialogOpen(true)
+  }
+
+  const handleBulkCategoryUpdate = async () => {
+    if (selectedCount === 0) return
+
+    setBulkUpdating(true)
+    try {
+      const response = await fetch('/api/business/customers', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerIds: Array.from(selectedCustomerIds),
+          category: bulkCategory.trim() || null,
+        }),
+      })
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(getApiErrorMessage(data, 'Failed to update customers'))
+      }
+
+      toast({
+        title: 'Başarılı',
+        description: `${data.updatedCount || selectedCount} müşteri kategorilendirildi`,
+      })
+      setBulkCategoryDialogOpen(false)
+      setBulkCategory('')
+      handleClearSelection()
+      fetchCustomers()
+    } catch (error: any) {
+      toast({
+        title: 'Hata',
+        description: error.message || 'Müşteriler güncellenirken bir hata oluştu',
+        variant: 'destructive',
+      })
+    } finally {
+      setBulkUpdating(false)
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedCount === 0) return
+
+    setBulkDeleting(true)
+    try {
+      const response = await fetch('/api/business/customers', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customerIds: Array.from(selectedCustomerIds) }),
+      })
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(getApiErrorMessage(data, 'Failed to delete customers'))
+      }
+
+      toast({
+        title: 'Başarılı',
+        description: `${data.deletedCount || selectedCount} müşteri silindi`,
+      })
+      setDeleteDialogOpen(false)
+      handleClearSelection()
+      setPage(1)
+      fetchCustomers()
+      fetchLimits()
+    } catch (error: any) {
+      toast({
+        title: 'Hata',
+        description: error.message || 'Müşteriler silinirken bir hata oluştu',
+        variant: 'destructive',
+      })
+    } finally {
+      setBulkDeleting(false)
     }
   }
 
@@ -553,6 +721,95 @@ export default function CustomersPage() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+
+          <Dialog open={bulkCategoryDialogOpen} onOpenChange={setBulkCategoryDialogOpen}>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Tag className="h-5 w-5" />
+                  Toplu Kategorilendir
+                </DialogTitle>
+                <DialogDescription>
+                  {selectedCount} seçili müşteri için kategori güncellenecek
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-2">
+                <Label htmlFor="bulk-category">Kategori</Label>
+                <Input
+                  id="bulk-category"
+                  value={bulkCategory}
+                  onChange={(e) => setBulkCategory(e.target.value)}
+                  placeholder="Örn: VIP, Yeni Müşteri, Düzenli"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Boş bırakırsanız seçilen müşterilerin kategorisi kaldırılır.
+                </p>
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setBulkCategoryDialogOpen(false)}
+                  disabled={bulkUpdating}
+                >
+                  İptal
+                </Button>
+                <Button onClick={handleBulkCategoryUpdate} disabled={bulkUpdating} className="gap-2">
+                  {bulkUpdating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Kaydediliyor...
+                    </>
+                  ) : (
+                    <>
+                      <Tag className="h-4 w-4" />
+                      Uygula
+                    </>
+                  )}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Trash2 className="h-5 w-5" />
+                  Seçilen Müşterileri Sil
+                </DialogTitle>
+                <DialogDescription>
+                  {selectedCount} seçili müşteri silinecek. Bu işlem geri alınamaz.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setDeleteDialogOpen(false)}
+                  disabled={bulkDeleting}
+                >
+                  İptal
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleBulkDelete}
+                  disabled={bulkDeleting}
+                  className="gap-2"
+                >
+                  {bulkDeleting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Siliniyor...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="h-4 w-4" />
+                      Sil
+                    </>
+                  )}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -667,10 +924,63 @@ export default function CustomersPage() {
             </div>
           ) : (
             <>
+              <div className="mb-4 flex flex-col gap-3 rounded-md border bg-muted/30 p-3 lg:flex-row lg:items-center lg:justify-between">
+                <div className="text-sm text-muted-foreground">
+                  {selectedCount > 0
+                    ? `${selectedCount} müşteri seçildi`
+                    : 'Toplu işlem için müşterileri seçin'}
+                </div>
+                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSelectFilteredCustomers}
+                    disabled={filteredCustomers.length === 0}
+                  >
+                    {allFilteredSelected ? 'Filtre Seçimini Kaldır' : 'Filtredekileri Seç'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleClearSelection}
+                    disabled={selectedCount === 0}
+                  >
+                    Seçimi Temizle
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleOpenBulkCategoryDialog}
+                    disabled={selectedCount === 0}
+                    className="gap-2"
+                  >
+                    <Tag className="h-4 w-4" />
+                    Kategorilendir
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setDeleteDialogOpen(true)}
+                    disabled={selectedCount === 0}
+                    className="gap-2"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Sil
+                  </Button>
+                </div>
+              </div>
+
               <div className="rounded-md border">
                 <Table>
                   <TableHeader>
                   <TableRow>
+                    <TableHead className="w-12">
+                      <Checkbox
+                        checked={allVisibleSelected ? true : someVisibleSelected ? 'indeterminate' : false}
+                        onCheckedChange={handleToggleVisibleCustomers}
+                        aria-label="Sayfadaki müşterileri seç"
+                      />
+                    </TableHead>
                     <TableHead>İsim</TableHead>
                     <TableHead className="hidden sm:table-cell">Telefon</TableHead>
                     <TableHead className="hidden md:table-cell">Kategori</TableHead>
@@ -681,7 +991,18 @@ export default function CustomersPage() {
                   </TableHeader>
                   <TableBody>
                     {paginatedCustomers.map((customer) => (
-                      <TableRow key={customer.id}>
+                      <TableRow
+                        key={customer.id}
+                        className={selectedCustomerIds.has(customer.id) ? 'bg-muted/50' : ''}
+                        data-state={selectedCustomerIds.has(customer.id) ? 'selected' : undefined}
+                      >
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedCustomerIds.has(customer.id)}
+                            onCheckedChange={() => handleToggleCustomer(customer.id)}
+                            aria-label={`${customer.name} seç`}
+                          />
+                        </TableCell>
                         <TableCell className="font-medium">{customer.name}</TableCell>
                         <TableCell className="hidden sm:table-cell font-mono text-sm">
                           {customer.phone}

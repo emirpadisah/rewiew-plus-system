@@ -1,7 +1,10 @@
 import {
   createCustomer,
   createCustomersBulk,
+  deleteCustomersByBusinessId,
+  getCustomersByBusinessIdAndIds,
   getCustomersByBusinessId,
+  updateCustomersCategory,
 } from '@/lib/db/repositories/customers'
 import { MAX_CUSTOMER_PACKAGE_LIMIT } from '@/lib/business-packages'
 import { getBusinessLimitsSnapshot } from '@/lib/business-limits'
@@ -22,6 +25,29 @@ const createCustomerSchema = z.object({
 const createCustomersBulkSchema = z.object({
   customers: z.array(createCustomerSchema).min(1),
 })
+
+const customerIdsSchema = z.array(z.string().uuid()).min(1).max(MAX_CUSTOMER_PACKAGE_LIMIT)
+
+const bulkUpdateCategorySchema = z.object({
+  customerIds: customerIdsSchema,
+  category: z.string().trim().max(100).nullable(),
+})
+
+const bulkDeleteCustomersSchema = z.object({
+  customerIds: customerIdsSchema,
+})
+
+function getUniqueCustomerIds(customerIds: string[]) {
+  return Array.from(new Set(customerIds))
+}
+
+async function assertCustomersBelongToBusiness(businessId: string, customerIds: string[]) {
+  const customers = await getCustomersByBusinessIdAndIds(businessId, customerIds)
+
+  if (customers.length !== customerIds.length) {
+    throw new ApiError(404, 'Secilen musterilerden bazilari bulunamadi.', 'CUSTOMERS_NOT_FOUND')
+  }
+}
 
 function createPackageRequiredError(limits: Awaited<ReturnType<typeof getBusinessLimitsSnapshot>>, requested: number) {
   return new ApiError(
@@ -181,6 +207,99 @@ export async function POST(request: Request) {
     return handleRouteError({
       module: MODULE,
       method: 'POST',
+      path: PATH,
+      startTime,
+      error,
+    })
+  }
+}
+
+export async function PATCH(request: Request) {
+  const startTime = Date.now()
+
+  try {
+    assertSameOrigin(request)
+    const user = await requireBusinessUser()
+
+    const body = await request.json()
+    const data = bulkUpdateCategorySchema.parse(body)
+    const customerIds = getUniqueCustomerIds(data.customerIds)
+    const category = data.category ? data.category : null
+
+    await assertCustomersBelongToBusiness(user.businessId, customerIds)
+
+    log.info(MODULE, 'Bulk customer category update started', {
+      businessId: user.businessId,
+      customerCount: customerIds.length,
+      category,
+    })
+
+    const customers = await updateCustomersCategory(user.businessId, customerIds, category)
+
+    log.info(MODULE, 'Bulk customer category update completed', {
+      businessId: user.businessId,
+      updatedCount: customers.length,
+      durationMs: Date.now() - startTime,
+    })
+    log.api(MODULE, 'PATCH', PATH, 200, Date.now() - startTime)
+
+    return Response.json({ customers, updatedCount: customers.length })
+  } catch (error) {
+    return handleRouteError({
+      module: MODULE,
+      method: 'PATCH',
+      path: PATH,
+      startTime,
+      error,
+    })
+  }
+}
+
+export async function DELETE(request: Request) {
+  const startTime = Date.now()
+
+  try {
+    assertSameOrigin(request)
+    const user = await requireBusinessUser()
+
+    const body = await request.json()
+    const data = bulkDeleteCustomersSchema.parse(body)
+    const customerIds = getUniqueCustomerIds(data.customerIds)
+
+    await assertCustomersBelongToBusiness(user.businessId, customerIds)
+
+    log.info(MODULE, 'Bulk customer deletion started', {
+      businessId: user.businessId,
+      customerCount: customerIds.length,
+    })
+
+    let deletedCount = 0
+    try {
+      deletedCount = await deleteCustomersByBusinessId(user.businessId, customerIds)
+    } catch (error: any) {
+      if (error?.code === '23503') {
+        throw new ApiError(
+          409,
+          'Secilen musterilerden bazilarinin mesaj gecmisi oldugu icin silme islemi tamamlanamadi.',
+          'CUSTOMER_DELETE_CONFLICT'
+        )
+      }
+
+      throw error
+    }
+
+    log.info(MODULE, 'Bulk customer deletion completed', {
+      businessId: user.businessId,
+      deletedCount,
+      durationMs: Date.now() - startTime,
+    })
+    log.api(MODULE, 'DELETE', PATH, 200, Date.now() - startTime)
+
+    return Response.json({ deletedCount })
+  } catch (error) {
+    return handleRouteError({
+      module: MODULE,
+      method: 'DELETE',
       path: PATH,
       startTime,
       error,
