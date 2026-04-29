@@ -1,7 +1,30 @@
 'use client'
 
 import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react'
-import { ArrowUpRight, BarChart3, CheckCircle2, Menu, MessageSquare, MoreVertical, Send, Upload } from 'lucide-react'
+import {
+  ArrowRight,
+  ArrowUpRight,
+  BarChart3,
+  Building2,
+  Car,
+  CheckCircle2,
+  Coffee,
+  FileText,
+  HeartPulse,
+  History,
+  Link2,
+  Menu,
+  MessageSquare,
+  MoreVertical,
+  Send,
+  ShieldCheck,
+  Sparkles,
+  Star,
+  Tags,
+  TrendingUp,
+  Upload,
+  Users,
+} from 'lucide-react'
 
 const menuLinks = [
   { label: 'ANA SAYFA', href: '/' },
@@ -66,6 +89,164 @@ const processSteps = [
     cta: 'Gönderim akışına bak',
     image: '/landing/step-send-message.png',
     alt: 'YorumUp mesaj gönderme ekranı',
+  },
+]
+
+const platformCards: Array<{
+  eyebrow: string
+  title: string
+  description: string
+  href: string
+  cta: string
+  image: string
+  icon: ReactNode
+  stat: string
+  statLabel: string
+  tags: string[]
+}> = [
+  {
+    eyebrow: 'Build',
+    title: 'Müşteri listesini büyüt',
+    description: 'CSV aktarımı, kategoriler ve müşteri notlarıyla yorum isteyeceğin kitleyi tek yerde düzenle.',
+    href: '/business/customers',
+    cta: 'Listeyi oluştur',
+    image: '/landing/step-customers.png',
+    icon: <Users className="h-5 w-5" />,
+    stat: '620',
+    statLabel: 'müşteri tek panelde',
+    tags: ['CSV', 'Kategori', 'Limit'],
+  },
+  {
+    eyebrow: 'Publish',
+    title: 'WhatsApp davetlerini gönder',
+    description: 'Şablonunu seç, hedef müşterileri işaretle ve yorum linkini doğru zamanda WhatsApp ile ilet.',
+    href: '/business/send-message',
+    cta: 'Davet gönder',
+    image: '/landing/step-send-message.png',
+    icon: <Send className="h-5 w-5" />,
+    stat: '38',
+    statLabel: 'bugünkü davet',
+    tags: ['Şablon', 'Toplu seçim', 'Review link'],
+  },
+  {
+    eyebrow: 'Optimize',
+    title: 'Yorum dönüşlerini takip et',
+    description: 'Başarılı ve başarısız gönderimleri gör, günlük akışı izle ve işletmenin yorum ritmini düzenli tut.',
+    href: '/business/messages',
+    cta: 'Akışı takip et',
+    image: '/landing/step-whatsapp.png',
+    icon: <TrendingUp className="h-5 w-5" />,
+    stat: '94%',
+    statLabel: 'başarılı gönderim',
+    tags: ['Geçmiş', 'Durum', 'Rapor'],
+  },
+]
+
+const proofMetrics = [
+  { value: '1.248', label: 'demo davet akışı', detail: 'Toplu mesaj ekranında planlanan yorum davetleri.' },
+  { value: '94%', label: 'başarılı gönderim', detail: 'Gönderim geçmişinde izlenen örnek başarı oranı.' },
+  { value: '38', label: 'bugünkü davet', detail: 'Günlük ritmi takip etmek için öne çıkan panel metriği.' },
+  { value: '620', label: 'müşteri kaydı', detail: 'Kategori ve CSV ile yönetilen örnek müşteri havuzu.' },
+]
+
+const industryTabs: Array<{
+  key: string
+  label: string
+  icon: ReactNode
+  title: string
+  description: string
+  image: string
+  metric: string
+  metricLabel: string
+  benefits: string[]
+}> = [
+  {
+    key: 'cafes',
+    label: 'Kafeler',
+    icon: <Coffee className="h-4 w-4" />,
+    title: 'Yoğun saatlerden sonra yorum daveti aksın',
+    description: 'Müdavim, yeni müşteri ve paket servis kategorileriyle yorum isteğini doğru kitleye gönder.',
+    image: '/landing/step-send-message.png',
+    metric: '38',
+    metricLabel: 'bugünkü davet',
+    benefits: ['Servis sonrası hızlı WhatsApp daveti', 'VIP ve müdavim kategorileri', 'Günlük gönderim kontrolü'],
+  },
+  {
+    key: 'clinics',
+    label: 'Klinikler',
+    icon: <HeartPulse className="h-4 w-4" />,
+    title: 'Memnun hasta deneyimini görünür hale getir',
+    description: 'Randevu sonrası nazik mesaj şablonlarıyla güven veren yorumları daha düzenli topla.',
+    image: '/landing/step-customers.png',
+    metric: '94%',
+    metricLabel: 'başarılı gönderim',
+    benefits: ['Randevu sonrası kişisel davet', 'Hizmet türüne göre kategori', 'Mesaj geçmişi ve hata takibi'],
+  },
+  {
+    key: 'auto',
+    label: 'Oto servisler',
+    icon: <Car className="h-4 w-4" />,
+    title: 'Teslimattan sonra yorumu kaçırma',
+    description: 'Bakım, onarım ve ekspertiz müşterilerini ayır; teslim sonrası tek panelden yorum linki gönder.',
+    image: '/landing/step-whatsapp.png',
+    metric: '620',
+    metricLabel: 'kayıtlı müşteri',
+    benefits: ['Servis türüne göre ayrım', 'Toplu gönderim öncesi seçim', 'Bağlantı durumunu anlık görme'],
+  },
+  {
+    key: 'beauty',
+    label: 'Güzellik salonları',
+    icon: <Sparkles className="h-4 w-4" />,
+    title: 'Memnuniyeti sosyal kanıta dönüştür',
+    description: 'İşlem sonrası müşteriye sıcak bir mesajla ulaş, yorum linkini kaybolmadan ilet.',
+    image: '/landing/step-send-message.png',
+    metric: '1.248',
+    metricLabel: 'demo davet',
+    benefits: ['İşlem bazlı mesaj şablonları', 'Daimi müşteri listeleri', 'Hızlı takip ve tekrar gönderim'],
+  },
+]
+
+const featureCards: Array<{
+  title: string
+  description: string
+  href: string
+  icon: ReactNode
+}> = [
+  {
+    title: 'CSV aktarımı',
+    description: 'Mevcut müşteri listenizi dakikalar içinde panele alın.',
+    href: '/business/customers',
+    icon: <Upload className="h-5 w-5" />,
+  },
+  {
+    title: 'Mesaj şablonları',
+    description: 'Yorum davetlerini markanızın diline göre standartlaştırın.',
+    href: '/business/message-templates',
+    icon: <FileText className="h-5 w-5" />,
+  },
+  {
+    title: 'WhatsApp bağlantısı',
+    description: 'QR ile bağlanın, durumunuzu panelden takip edin.',
+    href: '/business/whatsapp',
+    icon: <Link2 className="h-5 w-5" />,
+  },
+  {
+    title: 'Gönderim geçmişi',
+    description: 'Başarılı ve başarısız mesajları aynı akışta görün.',
+    href: '/business/messages',
+    icon: <History className="h-5 w-5" />,
+  },
+  {
+    title: 'Kategori yönetimi',
+    description: 'Müşterileri hizmet, şube veya önceliğe göre gruplayın.',
+    href: '/business/customers',
+    icon: <Tags className="h-5 w-5" />,
+  },
+  {
+    title: 'Limit kontrolü',
+    description: 'Paket ve günlük gönderim sınırlarını net şekilde izleyin.',
+    href: '/business',
+    icon: <ShieldCheck className="h-5 w-5" />,
   },
 ]
 
@@ -282,20 +463,71 @@ function HeroChoiceCard({
 
 function ProcessStepsSection() {
   const [activeStep, setActiveStep] = useState(0)
+  const [isTitleVisible, setIsTitleVisible] = useState(false)
+  const sectionRef = useRef<HTMLElement | null>(null)
+
+  useEffect(() => {
+    const section = sectionRef.current
+
+    if (!section) {
+      return
+    }
+
+    const copy = section.querySelector('.webflow-tabs-copy')
+
+    if (!copy) {
+      return
+    }
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setIsTitleVisible(true)
+        observer.disconnect()
+      }
+    }, {
+      rootMargin: '0px 0px -18% 0px',
+      threshold: 0.24,
+    })
+
+    observer.observe(copy)
+
+    return () => observer.disconnect()
+  }, [])
+
+  const handleStepSelect = (index: number) => {
+    setActiveStep(index)
+  }
 
   return (
-    <section id="projects" className="webflow-process-section">
-      <div className="webflow-process-container">
+    <section
+      ref={sectionRef}
+      id="projects"
+      data-header-tone="light"
+      className={`webflow-process-section ${isTitleVisible ? 'is-title-visible' : ''}`}
+    >
+      <div className="webflow-process-pin">
+        <div className="webflow-process-container">
+          <div className="webflow-tabs-copy">
+            <span>3 adımda kurulum</span>
+            <h2>
+              <span className="webflow-scroll-title-line is-first">
+                <span className="webflow-title-word">Daha</span>
+                <span className="webflow-title-word">fazla</span>
+                <span className="webflow-title-word">yorumu</span>
+              </span>
+              <span className="webflow-scroll-title-line is-second">
+                <span className="webflow-title-word">sistemli</span>
+                <span className="webflow-title-word">topla</span>
+              </span>
+            </h2>
+            <p>
+              Müşteri listesinden WhatsApp bağlantısına, gönderim ekranından takip sürecine kadar
+              tüm akış tek yerde ilerler.
+            </p>
+          </div>
+
         <div className="webflow-tabs-layout">
           <div className="webflow-tabs-left">
-            <div className="webflow-tabs-copy">
-              <h2>Daha fazla yorumu sistemli topla</h2>
-              <p>
-                Müşteri listesinden WhatsApp bağlantısına, gönderim ekranından takip sürecine kadar
-                tüm akış tek yerde ilerler.
-              </p>
-            </div>
-
             <div className="webflow-tabs-list" role="tablist" aria-label="YorumUp kullanım adımları">
               {processSteps.map((step, index) => {
                 const isActive = activeStep === index
@@ -312,7 +544,7 @@ function ProcessStepsSection() {
                       aria-selected={isActive}
                       aria-controls={`yorumup-step-panel-${index}`}
                       className="webflow-tab-button"
-                      onClick={() => setActiveStep(index)}
+                      onClick={() => handleStepSelect(index)}
                     >
                       <span>{step.number}</span>
                       {step.title}
@@ -345,14 +577,274 @@ function ProcessStepsSection() {
             ))}
           </div>
         </div>
+        </div>
       </div>
     </section>
   )
 }
 
+function WebflowArrowLink({
+  href,
+  children,
+  tone = 'dark',
+}: {
+  href: string
+  children: string
+  tone?: 'dark' | 'light'
+}) {
+  return (
+    <a href={href} className={`webflow-arrow-link ${tone === 'light' ? 'is-light' : ''}`}>
+      <RollingText>{children}</RollingText>
+      <span aria-hidden="true">
+        <ArrowRight className="h-4 w-4" />
+      </span>
+    </a>
+  )
+}
+
+function PlatformCardsSection() {
+  return (
+    <section id="about" data-header-tone="light" className="webflow-continuation-section webflow-platform-section">
+      <div className="webflow-section-inner">
+        <div className="webflow-section-heading webflow-scroll-reveal">
+          <span className="webflow-section-kicker">Yorum toplama sistemi</span>
+          <h2>Her yorumu rastlantıya bırakmadan topla.</h2>
+          <p>
+            Webflow’un büyük kart ritminden ilham alan bu akış, müşteri listesinden WhatsApp davetine
+            ve gönderim takibine kadar YorumUp’ın temel değerini görünür kılar.
+          </p>
+        </div>
+
+        <div className="webflow-platform-grid">
+          {platformCards.map((card, index) => (
+            <a
+              key={card.title}
+              href={card.href}
+              className="webflow-platform-card webflow-scroll-reveal"
+              style={{ animationDelay: `${index * 90}ms` }}
+            >
+              <div className="webflow-platform-card-top">
+                <span className="webflow-platform-icon">{card.icon}</span>
+                <span>{card.eyebrow}</span>
+              </div>
+              <div>
+                <h3>{card.title}</h3>
+                <p>{card.description}</p>
+              </div>
+              <div className="webflow-platform-tags">
+                {card.tags.map((tag) => (
+                  <span key={tag}>{tag}</span>
+                ))}
+              </div>
+              <div className="webflow-platform-visual">
+                <img src={card.image} alt="" loading="lazy" />
+              </div>
+              <div className="webflow-platform-card-bottom">
+                <span>
+                  <strong>{card.stat}</strong>
+                  {card.statLabel}
+                </span>
+                <span className="webflow-card-arrow" aria-hidden="true">
+                  <ArrowUpRight className="h-5 w-5" />
+                </span>
+              </div>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function ProofMetricsSection() {
+  return (
+    <section data-header-tone="dark" className="webflow-proof-section">
+      <div className="webflow-section-inner">
+        <div className="webflow-proof-layout">
+          <div className="webflow-proof-copy webflow-scroll-reveal">
+            <span className="webflow-section-kicker">Demo panel verileri</span>
+            <h2>Yorum akışını rakamlarla yönet.</h2>
+            <p>
+              Metrikler gerçek müşteri iddiası değil; ürün panelinde takip edilen yorum daveti akışını
+              anlatan örnek ekran verileridir.
+            </p>
+            <WebflowArrowLink href="/business">Paneli incele</WebflowArrowLink>
+          </div>
+
+          <div className="webflow-metric-grid">
+            {proofMetrics.map((metric, index) => (
+              <article
+                key={metric.label}
+                className="webflow-metric-card webflow-scroll-reveal"
+                style={{ animationDelay: `${index * 70}ms` }}
+              >
+                <strong>{metric.value}</strong>
+                <span>{metric.label}</span>
+                <p>{metric.detail}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function IndustryTabsSection() {
+  const [activeIndustry, setActiveIndustry] = useState(industryTabs[0].key)
+  const active = industryTabs.find((industry) => industry.key === activeIndustry) ?? industryTabs[0]
+
+  return (
+    <section data-header-tone="light" className="webflow-industries-section">
+      <div className="webflow-section-inner">
+        <div className="webflow-section-heading webflow-scroll-reveal">
+          <span className="webflow-section-kicker">Sektöre göre akış</span>
+          <h2>Her işletmenin yorum isteme anı farklı.</h2>
+          <p>
+            Kategoriler, şablonlar ve gönderim geçmişiyle farklı sektörlerin yorum toplama ritmini
+            aynı panelden yönet.
+          </p>
+        </div>
+
+        <div className="webflow-industry-shell webflow-scroll-reveal">
+          <div className="webflow-industry-tabs" role="tablist" aria-label="Sektör senaryoları">
+            {industryTabs.map((industry) => {
+              const isActive = industry.key === activeIndustry
+
+              return (
+                <button
+                  key={industry.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  className={`webflow-industry-tab ${isActive ? 'is-active' : ''}`}
+                  onClick={() => setActiveIndustry(industry.key)}
+                >
+                  {industry.icon}
+                  <span>{industry.label}</span>
+                </button>
+              )
+            })}
+          </div>
+
+          <div key={active.key} className="webflow-industry-panel" role="tabpanel">
+            <div className="webflow-industry-copy">
+              <span>{active.metric} · {active.metricLabel}</span>
+              <h3>{active.title}</h3>
+              <p>{active.description}</p>
+              <div className="webflow-benefit-list">
+                {active.benefits.map((benefit) => (
+                  <div key={benefit}>
+                    <CheckCircle2 className="h-4 w-4" />
+                    {benefit}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="webflow-industry-visual">
+              <img src={active.image} alt="" loading="lazy" />
+              <div className="webflow-floating-score" aria-hidden="true">
+                <Star className="h-4 w-4" />
+                <span>Yeni yorum fırsatı</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function FeatureGridSection() {
+  return (
+    <section data-header-tone="dark" className="webflow-features-section">
+      <div className="webflow-section-inner">
+        <div className="webflow-feature-heading webflow-scroll-reveal">
+          <span className="webflow-section-kicker">Panel özellikleri</span>
+          <h2>Yorum toplama operasyonu için gerekli parçalar.</h2>
+          <WebflowArrowLink href="/business" tone="light">Tüm akışı gör</WebflowArrowLink>
+        </div>
+
+        <div className="webflow-feature-grid">
+          {featureCards.map((feature, index) => (
+            <a
+              key={feature.title}
+              href={feature.href}
+              className="webflow-feature-card webflow-scroll-reveal"
+              style={{ animationDelay: `${index * 55}ms` }}
+            >
+              <span className="webflow-feature-icon">{feature.icon}</span>
+              <h3>{feature.title}</h3>
+              <p>{feature.description}</p>
+              <span className="webflow-card-arrow" aria-hidden="true">
+                <ArrowUpRight className="h-5 w-5" />
+              </span>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function FinalCtaFooter() {
+  return (
+    <section data-header-tone="light" className="webflow-final-section">
+      <div className="webflow-section-inner">
+        <div className="webflow-final-card webflow-scroll-reveal">
+          <div>
+            <span className="webflow-section-kicker">YorumUp ile başla</span>
+            <h2>Daha fazla yorumu düzenli toplamaya başla.</h2>
+            <p>
+              Müşteri listesini kur, WhatsApp bağlantını yap ve yorum linklerini tek panelden takip
+              edilebilir şekilde gönder.
+            </p>
+          </div>
+          <div className="webflow-final-actions">
+            <PillButton href="mailto:info@yorumup.com" tone="light" icon={<ArrowUpRight className="h-5 w-5" />}>
+              Demo al
+            </PillButton>
+            <PillButton href="/business" tone="dark" icon={<Building2 className="h-5 w-5" />}>
+              Panele git
+            </PillButton>
+          </div>
+        </div>
+
+        <footer className="webflow-footer">
+          <a href="/" className="webflow-footer-brand">
+            <MessageSquare className="h-5 w-5" />
+            YorumUp
+          </a>
+          <nav>
+            <a href="#about">Hakkımızda</a>
+            <a href="#projects">Projeler</a>
+            <a href="mailto:info@yorumup.com">İletişim</a>
+          </nav>
+          <span>WhatsApp ile yorum toplama paneli</span>
+        </footer>
+      </div>
+    </section>
+  )
+}
+
+function LandingContinuation() {
+  return (
+    <>
+      <PlatformCardsSection />
+      <ProofMetricsSection />
+      <IndustryTabsSection />
+      <FeatureGridSection />
+      <FinalCtaFooter />
+    </>
+  )
+}
+
 export default function Home() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isHeaderOnLight, setIsHeaderOnLight] = useState(false)
   const heroRef = useRef<HTMLElement | null>(null)
+  const headerOnLightRef = useRef(false)
 
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
@@ -364,6 +856,32 @@ export default function Home() {
     window.addEventListener('keydown', handleEscape)
 
     return () => window.removeEventListener('keydown', handleEscape)
+  }, [])
+
+  useEffect(() => {
+    const updateHeaderTone = () => {
+      const headerCheckY = 96
+      const tonedSection = Array.from(document.querySelectorAll<HTMLElement>('[data-header-tone]')).find((section) => {
+        const rect = section.getBoundingClientRect()
+
+        return rect.top <= headerCheckY && rect.bottom >= headerCheckY
+      })
+      const nextHeaderOnLight = tonedSection?.dataset.headerTone === 'light'
+
+      if (nextHeaderOnLight !== headerOnLightRef.current) {
+        headerOnLightRef.current = nextHeaderOnLight
+        setIsHeaderOnLight(nextHeaderOnLight)
+      }
+    }
+
+    updateHeaderTone()
+    window.addEventListener('scroll', updateHeaderTone, { passive: true })
+    window.addEventListener('resize', updateHeaderTone)
+
+    return () => {
+      window.removeEventListener('scroll', updateHeaderTone)
+      window.removeEventListener('resize', updateHeaderTone)
+    }
   }, [])
 
   const handleHeroPointerMove = (event: PointerEvent<HTMLElement>) => {
@@ -382,11 +900,21 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen overflow-x-hidden bg-[#090b0d] text-white">
+    <main className="min-h-screen overflow-x-clip bg-[#090b0d] text-white">
       <header className="pointer-events-none fixed inset-x-0 top-0 z-[80] px-5 py-5 sm:px-8">
         <nav className="mx-auto flex max-w-[1480px] items-center justify-between">
-          <a href="/" className="group pointer-events-auto flex items-center gap-3" aria-label="YorumUp home">
-            <span className="flex h-10 w-10 items-center justify-center rounded-md bg-white text-[#090b0d] transition-transform duration-500 ease-[cubic-bezier(0.76,0,0.24,1)] group-hover:rotate-3">
+          <a
+            href="/"
+            className={`group pointer-events-auto flex items-center gap-3 transition-colors duration-300 ${
+              isHeaderOnLight ? 'text-[#090b0d]' : 'text-white'
+            }`}
+            aria-label="YorumUp home"
+          >
+            <span
+              className={`flex h-10 w-10 items-center justify-center rounded-md transition duration-500 ease-[cubic-bezier(0.76,0,0.24,1)] group-hover:rotate-3 ${
+                isHeaderOnLight ? 'bg-[#090b0d] text-white' : 'bg-white text-[#090b0d]'
+              }`}
+            >
               <MessageSquare className="h-5 w-5" />
             </span>
             <span className="text-lg font-semibold tracking-[-0.01em]">
@@ -413,20 +941,20 @@ export default function Home() {
 
       <div
         aria-hidden={!isMenuOpen}
-        className={`fixed right-4 top-20 z-[70] max-h-[calc(100dvh-6rem)] w-[min(calc(100vw-2rem),388px)] overflow-y-auto overscroll-contain rounded-[18px] transition-[clip-path,opacity,transform] duration-[780ms] ease-[cubic-bezier(0.76,0,0.24,1)] [scrollbar-width:none] sm:right-8 sm:top-6 sm:max-h-[calc(100dvh-3rem)] ${
+        className={`fixed right-4 top-20 z-[70] max-h-[calc(100dvh-6rem)] w-[min(calc(100vw-2rem),360px)] overflow-y-auto overscroll-contain rounded-[16px] transition-[clip-path,opacity,transform] duration-[780ms] ease-[cubic-bezier(0.76,0,0.24,1)] [scrollbar-width:none] sm:right-8 sm:top-6 sm:max-h-[calc(100dvh-3rem)] ${
           isMenuOpen ? 'pointer-events-auto translate-y-0 opacity-100' : 'pointer-events-none -translate-y-2 opacity-0'
         }`}
         style={{
           clipPath: isMenuOpen ? 'circle(145% at calc(100% - 40px) 28px)' : 'circle(0% at calc(100% - 40px) 28px)',
         }}
       >
-        <div className="grid gap-2.5 sm:gap-3">
+        <div className="grid gap-2 sm:gap-2.5">
           <div
             className={`grid items-center gap-2 transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] sm:gap-3 ${
               isMenuOpen ? 'translate-y-0 opacity-100' : '-translate-y-5 opacity-0'
             }`}
             style={{
-              gridTemplateColumns: 'minmax(0, 1fr) 112px',
+              gridTemplateColumns: 'minmax(0, 1fr) 124px',
               transitionDelay: isMenuOpen ? '130ms' : '0ms',
             }}
           >
@@ -434,33 +962,33 @@ export default function Home() {
               href="mailto:info@yorumup.com"
               tone="dark"
               icon={<span className="h-1.5 w-1.5 rounded-full bg-white" />}
-              className="w-full min-w-0 px-3 sm:px-5"
+              className="w-full min-w-0 !h-11 px-3 !text-sm sm:!h-12 sm:px-4 sm:!text-sm"
             >
               İLETİŞİM
             </PillButton>
             <PillButton
               onClick={() => setIsMenuOpen(false)}
               tone="light"
-              icon={<MoreVertical className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={3} />}
-              className="w-full px-0"
+              icon={<MoreVertical className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={3} />}
+              className="w-full !h-11 px-3 !text-sm sm:!h-12 sm:px-4 sm:!text-sm"
             >
               KAPAT
             </PillButton>
           </div>
 
           <section
-            className={`rounded-[12px] bg-white px-8 py-7 text-black shadow-2xl transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] sm:px-10 sm:py-8 ${
+            className={`rounded-[12px] bg-white px-6 py-6 text-black shadow-2xl transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] sm:px-7 sm:py-7 ${
               isMenuOpen ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
             }`}
             style={{ transitionDelay: isMenuOpen ? '210ms' : '0ms' }}
           >
-            <nav className="grid gap-7 sm:gap-8">
+            <nav className="grid gap-5 sm:gap-6">
               {menuLinks.map((link, index) => (
                 <a
                   key={link.label}
                   href={link.href}
                   onClick={() => setIsMenuOpen(false)}
-                  className={`group flex items-center justify-between text-[1.85rem] font-normal leading-none tracking-[-0.05em] text-black transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] hover:pl-2 sm:text-[2rem] sm:tracking-[-0.06em] ${
+                  className={`group flex items-center justify-between text-[1.58rem] font-normal leading-none tracking-[-0.04em] text-black transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] hover:pl-2 sm:text-[1.75rem] sm:tracking-[-0.05em] ${
                     isMenuOpen ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
                   }`}
                   style={{ transitionDelay: isMenuOpen ? `${310 + index * 60}ms` : '0ms' }}
@@ -475,18 +1003,18 @@ export default function Home() {
           <a
             href="/business"
             onClick={() => setIsMenuOpen(false)}
-            className={`group flex h-[84px] items-center justify-between rounded-[9px] bg-black px-8 text-white shadow-2xl transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-[#111] sm:h-[98px] sm:px-10 ${
+            className={`group flex h-[72px] items-center justify-between rounded-[9px] bg-black px-6 text-white shadow-2xl transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-[#111] sm:h-[82px] sm:px-7 ${
               isMenuOpen ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
             }`}
             style={{ transitionDelay: isMenuOpen ? '480ms' : '0ms' }}
           >
-            <div className="flex items-center gap-6 sm:gap-7">
-              <span className="text-[2.45rem] font-bold leading-none tracking-[-0.08em]">ö</span>
-              <span className="text-[1.8rem] font-semibold leading-none tracking-[-0.055em] sm:text-[2rem] sm:tracking-[-0.06em]">
+            <div className="flex items-center gap-4 sm:gap-5">
+              <span className="text-[2rem] font-bold leading-none tracking-[-0.06em]">ö</span>
+              <span className="text-[1.45rem] font-semibold leading-none tracking-[-0.04em] sm:text-[1.65rem] sm:tracking-[-0.05em]">
                 <RollingText>PANEL</RollingText>
               </span>
             </div>
-            <ArrowUpRight className="h-6 w-6 transition duration-300 group-hover:translate-x-1 group-hover:-translate-y-1 sm:h-7 sm:w-7" />
+            <ArrowUpRight className="h-5 w-5 transition duration-300 group-hover:translate-x-1 group-hover:-translate-y-1 sm:h-6 sm:w-6" />
           </a>
         </div>
       </div>
@@ -540,6 +1068,7 @@ export default function Home() {
         </div>
       </section>
       <ProcessStepsSection />
+      <LandingContinuation />
     </main>
   )
 }
