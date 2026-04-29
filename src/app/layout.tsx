@@ -3,7 +3,7 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { Toaster } from "@/components/ui/toaster"
 
-const inter = Inter({ subsets: ["latin"] })
+const inter = Inter({ subsets: ["latin", "latin-ext"] })
 
 export const metadata: Metadata = {
   title: "YorumUp - WhatsApp Review SaaS",
@@ -24,4 +24,3 @@ export default function RootLayout({
     </html>
   )
 }
-

@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: "WF Visual Sans Variable";
+  src: url("https://dhygzobemt712.cloudfront.net/Fonts/VF/WFVisualSansVF.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
 @layer base {
   :root {
     /* Base Colors - Premium Corporate Palette */
@@ -284,5 +292,609 @@
       linear-gradient(to bottom, rgba(0, 0, 0, 0.1) 1px, transparent 1px);
     background-size: 40px 40px;
   }
-}
 
+  .rolling-text {
+    position: relative;
+    display: block;
+    height: 1.28em;
+    overflow: hidden;
+    line-height: 1.28;
+  }
+
+  .rolling-text-line {
+    display: block;
+    transform: translate3d(0, 0, 0);
+    transition: transform 500ms cubic-bezier(0.76, 0, 0.24, 1);
+  }
+
+  .rolling-text-line-next {
+    position: absolute;
+    left: 0;
+    top: 1.5em;
+  }
+
+  .group:hover .rolling-text-line {
+    transform: translate3d(0, -1.5em, 0);
+  }
+
+  .webflow-hero {
+    --hero-x: 72%;
+    --hero-y: 42%;
+    font-family: "WF Visual Sans Variable", Arial, sans-serif;
+    isolation: isolate;
+  }
+
+  .webflow-hero-title {
+    font-family: "WF Visual Sans Variable", Arial, sans-serif;
+    font-size: 2.75rem;
+    font-variation-settings: "wght" 600, "opsz" 100;
+    font-weight: 600;
+    letter-spacing: 0;
+    line-height: 1.04;
+    text-wrap: balance;
+  }
+
+  @media (min-width: 640px) {
+    .webflow-hero-title {
+      font-size: 4rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .webflow-hero-title {
+      font-size: 5rem;
+    }
+  }
+
+  .webflow-hero-base {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(180deg, #050608 0%, #050608 31%, #071326 58%, #0e3b82 100%);
+  }
+
+  .webflow-hero-base::after {
+    content: "";
+    position: absolute;
+    inset: auto 0 0;
+    height: 54%;
+    background:
+      linear-gradient(90deg, rgba(2, 7, 12, 0.98) 0%, rgba(5, 17, 36, 0.92) 28%, rgba(8, 35, 72, 0.84) 62%, rgba(20, 110, 245, 0.28) 100%);
+  }
+
+  .webflow-hero-fluted {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .webflow-hero-fluted::before {
+    content: "";
+    position: absolute;
+    inset: -12% -5% -8% 38%;
+    opacity: 0.72;
+    background:
+      linear-gradient(115deg, transparent 0%, rgba(255, 255, 255, 0.04) 42%, transparent 57%),
+      repeating-linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.018) 0,
+        rgba(255, 255, 255, 0.018) 5.75rem,
+        rgba(20, 110, 245, 0.11) 5.75rem,
+        rgba(20, 110, 245, 0.11) 11.25rem,
+        rgba(0, 0, 0, 0.22) 11.25rem,
+        rgba(0, 0, 0, 0.22) 17rem
+      );
+    background-position: var(--hero-x) var(--hero-y), center;
+    filter: blur(0.2px);
+    -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 20%, #000 100%);
+    mask-image: linear-gradient(90deg, transparent 0%, #000 20%, #000 100%);
+    animation: webflow-fluted-drift 12s ease-in-out infinite alternate;
+    transition: background-position 300ms ease-out;
+  }
+
+  .webflow-hero-fluted::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.022) 1px, transparent 1px);
+    background-size: 6rem 6rem;
+    opacity: 0.24;
+  }
+
+  .webflow-hero-grid {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.07), transparent 44%),
+      linear-gradient(90deg, rgba(0, 0, 0, 0.45), transparent 48%, rgba(0, 0, 0, 0.16));
+    pointer-events: none;
+  }
+
+  .webflow-reveal-large,
+  .webflow-reveal-small,
+  .webflow-creation-card {
+    opacity: 0;
+    transform: translate3d(0, 2.25rem, 0);
+    filter: blur(6px);
+    animation: webflow-rise 900ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .webflow-reveal-large {
+    animation-delay: 120ms;
+  }
+
+  .webflow-reveal-small {
+    animation-delay: 300ms;
+  }
+
+  .webflow-creation-card {
+    grid-column-gap: 1.5rem;
+    grid-row-gap: 1.5rem;
+    -webkit-backdrop-filter: blur(5px);
+    backdrop-filter: blur(5px);
+    background-color: rgba(20, 110, 245, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.5rem;
+    color: white;
+    justify-content: flex-start;
+    align-items: center;
+    min-height: 13rem;
+    padding: 1.5rem;
+    display: flex;
+    position: relative;
+    overflow: hidden;
+    text-decoration: none;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.28);
+    transition:
+      transform 520ms cubic-bezier(0.16, 1, 0.3, 1),
+      background-color 320ms ease,
+      border-color 320ms ease,
+      box-shadow 520ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .webflow-creation-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(120deg, rgba(255, 255, 255, 0.08), transparent 48%);
+    opacity: 0.8;
+    pointer-events: none;
+    transition: opacity 320ms ease;
+  }
+
+  .webflow-creation-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    background:
+      linear-gradient(180deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.34)),
+      rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 320ms ease;
+  }
+
+  .webflow-creation-card:hover {
+    transform: translate3d(0, -0.125rem, 0);
+    background-color: rgba(4, 13, 28, 0.72);
+    border-color: rgba(255, 255, 255, 0.18);
+    box-shadow: 0 32px 90px rgba(0, 0, 0, 0.34);
+  }
+
+  .webflow-creation-card:hover::before {
+    opacity: 0.22;
+  }
+
+  .webflow-creation-card:hover::after {
+    opacity: 1;
+  }
+
+  .webflow-preview-wrap {
+    aspect-ratio: 1;
+    justify-content: center;
+    align-items: flex-start;
+    width: min(33%, 11.5rem);
+    min-width: 7.5rem;
+    max-width: 33%;
+    display: flex;
+    flex: none;
+    position: relative;
+    z-index: 1;
+  }
+
+  .webflow-preview-inner {
+    object-fit: cover;
+    object-position: 50% 0%;
+    border-top-left-radius: 0.125rem;
+    border-top-right-radius: 0.125rem;
+    flex: none;
+    width: 100%;
+    height: calc(100% + 1.5rem);
+    position: absolute;
+    inset: 0 0 -1.5rem;
+    -webkit-mask-image: linear-gradient(#000 0%, #000 54%, transparent 100%);
+    mask-image: linear-gradient(#000 0%, #000 54%, transparent 100%);
+    transition: transform 600ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .webflow-creation-card:hover .webflow-preview-inner {
+    transform: translate3d(0, -0.35rem, 0) scale(1.025);
+  }
+
+  .webflow-preview-shadow {
+    opacity: 0.9;
+    padding-top: 1rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    position: absolute;
+    inset: -1rem -1rem 0;
+    -webkit-mask-image: linear-gradient(#000 50%, transparent);
+    mask-image: linear-gradient(#000 50%, transparent);
+  }
+
+  .webflow-preview-shadow::before {
+    content: "";
+    display: block;
+    width: 100%;
+    height: 100%;
+    box-shadow:
+      0 84px 24px rgba(0, 0, 0, 0),
+      0 54px 22px rgba(0, 0, 0, 0.03),
+      0 30px 18px rgba(0, 0, 0, 0.1),
+      0 13px 13px rgba(0, 0, 0, 0.14),
+      0 3px 7px rgba(0, 0, 0, 0.17);
+  }
+
+  .webflow-circle-btn {
+    position: absolute;
+    inset: 50% auto auto 50%;
+    z-index: 4;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 999px;
+    background: #146ef5;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    font-size: 0;
+    line-height: 1;
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, -50%) scale(0.58);
+    transition:
+      opacity 220ms ease,
+      transform 520ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .webflow-circle-btn::before {
+    content: "\2192";
+    color: white;
+    font-size: 1.05rem;
+    line-height: 1;
+    opacity: 0;
+    transform: translate3d(-0.4rem, 0, 0);
+    transition:
+      opacity 220ms ease,
+      transform 460ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .webflow-creation-card:hover .webflow-circle-btn {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  .webflow-creation-card:hover .webflow-circle-btn::before {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+
+  .webflow-process-section {
+    overflow: hidden;
+    background: #050505;
+    color: #fff;
+    font-family: "WF Visual Sans Variable", Arial, sans-serif;
+    padding: 7.5rem 0;
+  }
+
+  .webflow-process-container {
+    width: 90%;
+    max-width: 112rem;
+    margin: 0 auto;
+  }
+
+  .webflow-tabs-layout {
+    display: grid;
+    grid-template-columns: minmax(22rem, 0.36fr) minmax(0, 0.64fr);
+    gap: 5.5rem;
+    align-items: center;
+  }
+
+  .webflow-tabs-left {
+    min-width: 0;
+  }
+
+  .webflow-tabs-copy {
+    max-width: 35rem;
+    margin-bottom: 5.25rem;
+  }
+
+  .webflow-tabs-copy h2 {
+    margin: 0;
+    font-size: 4.75rem;
+    font-variation-settings: "wght" 620, "opsz" 100;
+    font-weight: 620;
+    letter-spacing: 0;
+    line-height: 0.98;
+    text-wrap: balance;
+  }
+
+  .webflow-tabs-copy p {
+    margin: 2rem 0 0;
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 1.25rem;
+    font-weight: 600;
+    line-height: 1.45;
+  }
+
+  .webflow-tabs-list {
+    display: grid;
+  }
+
+  .webflow-tab-item {
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.44);
+    transition: color 320ms ease, border-color 320ms ease;
+  }
+
+  .webflow-tab-item:last-child {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .webflow-tab-item.is-active {
+    border-top-color: rgba(255, 255, 255, 0.92);
+    color: #fff;
+  }
+
+  .webflow-tab-button {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.85rem 0;
+    color: currentColor;
+    font-size: 1.65rem;
+    font-variation-settings: "wght" 620, "opsz" 100;
+    font-weight: 620;
+    line-height: 1.12;
+    text-align: left;
+    transition: color 320ms ease;
+  }
+
+  .webflow-tab-button span {
+    width: 2.1rem;
+    color: rgba(255, 255, 255, 0.32);
+    font-size: 0.86rem;
+    font-weight: 800;
+    line-height: 1;
+    transition: color 320ms ease;
+  }
+
+  .webflow-tab-item.is-active .webflow-tab-button span {
+    color: #146ef5;
+  }
+
+  .webflow-tab-panel {
+    max-height: 0;
+    max-width: 30rem;
+    overflow: hidden;
+    opacity: 0;
+    transform: translate3d(0, -0.6rem, 0);
+    transition:
+      max-height 620ms cubic-bezier(0.16, 1, 0.3, 1),
+      opacity 320ms ease,
+      transform 620ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .webflow-tab-item.is-active .webflow-tab-panel {
+    max-height: 12rem;
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+
+  .webflow-tab-panel p {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.84);
+    font-size: 1.12rem;
+    font-weight: 600;
+    line-height: 1.46;
+  }
+
+  .webflow-tab-panel a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-top: 1.6rem;
+    padding-bottom: 0.2rem;
+    border-bottom: 1px solid currentColor;
+    color: #fff;
+    font-size: 1.02rem;
+    font-weight: 700;
+    line-height: 1.1;
+    text-decoration: none;
+  }
+
+  .webflow-tab-panel a span {
+    transition: transform 320ms ease;
+  }
+
+  .webflow-tab-panel a:hover span {
+    transform: translate3d(0.25rem, 0, 0);
+  }
+
+  .webflow-tabs-visual {
+    aspect-ratio: 16 / 9;
+    min-height: 0;
+    width: 100%;
+    overflow: hidden;
+    position: relative;
+    border-radius: 0.5rem;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.055), transparent),
+      #191919;
+    box-shadow:
+      0 100px 90px rgba(0, 0, 0, 0.36),
+      0 26px 32px rgba(0, 0, 0, 0.24);
+  }
+
+  .webflow-tabs-visual::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    pointer-events: none;
+    background:
+      linear-gradient(90deg, rgba(25, 25, 25, 0.12), transparent 22%),
+      linear-gradient(180deg, transparent 82%, rgba(25, 25, 25, 0.72));
+  }
+
+  .webflow-tabs-image {
+    position: absolute;
+    inset: 1.25rem;
+    margin: 0;
+    opacity: 0;
+    transform: none;
+    transition: opacity 520ms ease;
+  }
+
+  .webflow-tabs-image.is-active {
+    z-index: 2;
+    opacity: 1;
+    transform: none;
+  }
+
+  .webflow-tabs-image img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 0.25rem;
+    filter: brightness(0.86) contrast(1.03);
+    box-shadow: 0 44px 60px rgba(0, 0, 0, 0.28);
+  }
+
+  @keyframes webflow-rise {
+    to {
+      opacity: 1;
+      transform: translate3d(0, 0, 0);
+      filter: blur(0);
+    }
+  }
+
+  @keyframes webflow-fluted-drift {
+    from {
+      transform: translate3d(-1.25rem, 0, 0);
+    }
+    to {
+      transform: translate3d(1.25rem, 0, 0);
+    }
+  }
+
+  @media (max-width: 1023px) {
+    .webflow-tabs-layout {
+      grid-template-columns: 1fr;
+      gap: 3rem;
+    }
+
+    .webflow-tabs-copy {
+      margin-bottom: 2.5rem;
+    }
+
+    .webflow-tabs-visual {
+      min-height: 0;
+      order: -1;
+    }
+
+    .webflow-tabs-image {
+      inset: 1rem;
+    }
+  }
+
+  @media (max-width: 767px) {
+    .webflow-process-section {
+      padding: 5rem 0;
+    }
+
+    .webflow-tabs-copy h2 {
+      font-size: 3rem;
+    }
+
+    .webflow-tabs-copy p {
+      margin-top: 1.25rem;
+      font-size: 1.05rem;
+    }
+
+    .webflow-tab-button {
+      padding: 1.35rem 0;
+      font-size: 1.35rem;
+    }
+
+    .webflow-tab-panel p {
+      font-size: 1rem;
+    }
+
+    .webflow-tabs-visual {
+      min-height: 0;
+      border-radius: 0.5rem;
+    }
+
+    .webflow-tabs-image {
+      inset: 1rem;
+    }
+
+    .webflow-tabs-image img {
+      filter: brightness(0.82) contrast(1.04);
+    }
+
+    .webflow-creation-card {
+      min-height: 16.5rem;
+      align-items: flex-start;
+      padding-bottom: 10.5rem;
+    }
+
+    .webflow-preview-wrap {
+      position: absolute;
+      right: 1.5rem;
+      bottom: 0;
+      width: 9rem;
+      max-width: 46%;
+    }
+
+    .webflow-hero-fluted::before {
+      inset: -12% -5% -8% 0;
+      opacity: 0.42;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .webflow-reveal-large,
+    .webflow-reveal-small,
+    .webflow-creation-card {
+      opacity: 1;
+      transform: none;
+      filter: none;
+      animation: none;
+    }
+
+    .webflow-hero-fluted::before {
+      animation: none;
+    }
+  }
+}
