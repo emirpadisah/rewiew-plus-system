@@ -317,6 +317,264 @@
     transform: translate3d(0, -1.5em, 0);
   }
 
+  .language-selector-shell {
+    --language-selector-height: 5.75rem;
+    --language-scroll-progress: 0;
+    position: relative;
+    z-index: 90;
+    height: var(--language-selector-height);
+    background: #191715;
+    color: #fff;
+    font-family: "WF Visual Sans Variable", Arial, sans-serif;
+  }
+
+  .language-selector-shell:not(.is-select-expanded) {
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+  }
+
+  .language-fixed-wrapper {
+    position: fixed;
+    inset: 0 0 auto;
+    z-index: 90;
+    border-bottom: 1px solid rgba(234, 232, 228, 0.18);
+    background: #191715;
+    animation: language-fixed-wrapper-in 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    transform: translate3d(0, calc(var(--language-scroll-progress) * -50px), 0);
+    will-change: transform;
+  }
+
+  .language-intro-container {
+    display: grid;
+    grid-template-columns: minmax(12rem, 0.32fr) minmax(20rem, 0.42fr) minmax(9rem, 0.26fr);
+    align-items: center;
+    gap: 0.75rem;
+    height: var(--language-selector-height);
+    width: min(96%, 112rem);
+    margin: 0 auto;
+  }
+
+  .language-intro-copy {
+    margin: 0;
+    color: #dedfe5;
+    font-size: 1rem;
+    font-weight: 650;
+    line-height: 1.2;
+  }
+
+  .language-select {
+    position: relative;
+    min-width: 0;
+  }
+
+  .language-select-wrapper {
+    position: relative;
+  }
+
+  .language-select-button {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 4.15rem;
+    gap: 0.16rem;
+    width: 100%;
+    height: 4.15rem;
+    border: 0;
+    background: transparent;
+    color: #eae8e4;
+    cursor: pointer;
+    font: inherit;
+    padding: 0;
+    text-align: left;
+  }
+
+  .language-button-label-wrapper,
+  .language-button-icon-wrapper {
+    display: flex;
+    height: 100%;
+    align-items: center;
+    background: #2d2d2d;
+    color: #eae8e4;
+  }
+
+  .language-button-label-wrapper {
+    min-width: 0;
+    border-radius: 999px;
+    padding: 0 1.55rem;
+  }
+
+  .language-button-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.98rem;
+    font-weight: 760;
+    line-height: 1.1;
+  }
+
+  .language-button-icon-wrapper {
+    justify-content: center;
+    border-radius: 999px;
+    transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .language-select.is-expanded .language-button-icon-wrapper {
+    transform: rotate(180deg);
+  }
+
+  .language-options-wrapper {
+    position: absolute;
+    top: calc(100% + 0.35rem);
+    left: 0;
+    right: 0;
+    z-index: 3;
+    max-height: 0;
+    overflow: hidden;
+    border-radius: 1.4rem;
+    background: #2d2d2d;
+    opacity: 0;
+    pointer-events: none;
+    transform: translate3d(0, -0.35rem, 0);
+    transition:
+      max-height 600ms cubic-bezier(0.16, 1, 0.3, 1),
+      opacity 200ms ease,
+      transform 320ms cubic-bezier(0.16, 1, 0.3, 1),
+      border-radius 220ms ease;
+  }
+
+  .language-select.is-expanded .language-options-wrapper {
+    max-height: 22rem;
+    border-radius: 0.45rem;
+    opacity: 1;
+    pointer-events: auto;
+    transform: translate3d(0, 0, 0);
+  }
+
+  .language-options-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.1rem 0.35rem 1.35rem;
+  }
+
+  .language-options-header p {
+    margin: 0;
+    color: #dedfe5;
+    font-size: 0.85rem;
+    font-weight: 720;
+  }
+
+  .language-options-close-button {
+    display: grid;
+    width: 2.5rem;
+    height: 2.5rem;
+    place-items: center;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(234, 232, 228, 0.12);
+    color: #eae8e4;
+    cursor: pointer;
+  }
+
+  .language-options-scroll-container {
+    max-height: 16rem;
+    overflow-y: auto;
+    padding: 0.35rem 0 0.9rem;
+  }
+
+  .language-select-options {
+    display: grid;
+    gap: 0.15rem;
+    margin: 0;
+    padding: 0 0.8rem;
+    list-style: none;
+  }
+
+  .language-custom-select-option {
+    display: flex;
+    width: 100%;
+    min-height: 3.65rem;
+    align-items: center;
+    gap: 0.85rem;
+    border: 0;
+    border-radius: 0.35rem;
+    background: transparent;
+    color: #eae8e4;
+    cursor: pointer;
+    padding: 0.7rem 0.75rem;
+    text-align: left;
+  }
+
+  .language-custom-select-option:hover,
+  .language-custom-select-option[aria-selected='true'] {
+    background: rgba(234, 232, 228, 0.08);
+  }
+
+  .language-selected-option-indicator {
+    width: 1rem;
+    height: 1rem;
+    flex: 0 0 auto;
+    border: 1px solid rgba(234, 232, 228, 0.55);
+    border-radius: 999px;
+  }
+
+  .language-custom-select-option[aria-selected='true'] .language-selected-option-indicator {
+    border-width: 0.32rem;
+    border-color: #eae8e4;
+  }
+
+  .language-option-label-wrapper {
+    display: grid;
+    min-width: 0;
+    gap: 0.2rem;
+  }
+
+  .language-option-label {
+    font-size: 0.96rem;
+    font-weight: 760;
+    line-height: 1.05;
+  }
+
+  .language-option-sub-label {
+    color: rgba(234, 232, 228, 0.62);
+    font-size: 0.72rem;
+    font-weight: 650;
+    line-height: 1.15;
+  }
+
+  .language-selector-actions {
+    display: flex;
+    justify-self: end;
+  }
+
+  .language-confirm-pill {
+    height: 4.15rem !important;
+    min-height: 4.15rem;
+    border-radius: 999px;
+    padding-inline: 2.15rem !important;
+    font-size: 0.98rem !important;
+    font-weight: 760;
+  }
+
+  .language-select-button:focus-visible,
+  .language-options-close-button:focus-visible,
+  .language-custom-select-option:focus-visible {
+    box-shadow: 0 0 0 2px rgba(234, 232, 228, 0.9);
+  }
+
+  .language-aware-menu {
+    top: calc(var(--language-selector-offset, 0px) + 5rem);
+  }
+
+  @media (min-width: 640px) {
+    .language-aware-menu {
+      top: calc(var(--language-selector-offset, 0px) + 1.5rem);
+    }
+  }
+
+  @keyframes language-fixed-wrapper-in {
+    from {
+      transform: translate3d(0, -50px, 0);
+    }
+  }
+
   .webflow-hero {
     --hero-x: 72%;
     --hero-y: 42%;
@@ -813,28 +1071,6 @@
     line-height: 1.46;
   }
 
-  .webflow-tab-panel a {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.65rem;
-    margin-top: 1.35rem;
-    padding-bottom: 0.2rem;
-    border-bottom: 1px solid currentColor;
-    color: #03050a;
-    font-size: 0.98rem;
-    font-weight: 800;
-    line-height: 1.1;
-    text-decoration: none;
-  }
-
-  .webflow-tab-panel a span {
-    transition: transform 320ms ease;
-  }
-
-  .webflow-tab-panel a:hover span {
-    transform: translate3d(0.25rem, 0, 0);
-  }
-
   .webflow-tabs-visual {
     position: relative;
     width: 100%;
@@ -990,9 +1226,7 @@
       color 260ms ease;
   }
 
-  .webflow-arrow-link:hover > span:last-child,
-  .webflow-platform-card:hover .webflow-card-arrow,
-  .webflow-feature-card:hover .webflow-card-arrow {
+  .webflow-arrow-link:hover > span:last-child {
     transform: translate3d(0.18rem, -0.18rem, 0);
     background: #03050a;
   }
@@ -1148,6 +1382,100 @@
     font-size: 2.1rem;
     font-weight: 780;
     line-height: 0.9;
+  }
+
+  .webflow-logo-section {
+    overflow: hidden;
+    padding: 0 0 7.5rem;
+    background: #eef2ff;
+    color: #03050a;
+    font-family: "WF Visual Sans Variable", Arial, sans-serif;
+  }
+
+  .webflow-logo-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 0.6fr) minmax(18rem, 0.4fr);
+    gap: 2rem;
+    align-items: end;
+    margin-bottom: 2.5rem;
+  }
+
+  .webflow-logo-heading .webflow-section-kicker {
+    grid-column: 1 / -1;
+    margin-bottom: -0.6rem;
+  }
+
+  .webflow-logo-heading h2 {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.12em 0.2em;
+    margin: 0;
+    color: #03050a;
+    font-size: clamp(2.5rem, 4.8vw, 5.4rem);
+    font-variation-settings: "wght" 600, "opsz" 100;
+    font-weight: 600;
+    letter-spacing: 0;
+    line-height: 0.95;
+  }
+
+  .webflow-logo-heading h2 span {
+    display: inline-block;
+    opacity: 0;
+    transform: translate3d(0, 0.85em, 0) rotateX(24deg);
+    transform-origin: 50% 100%;
+    animation: webflow-logo-word-rise 900ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .webflow-logo-heading h2 span:nth-child(3n + 1) {
+    color: #146ef5;
+  }
+
+  .webflow-logo-heading h2 span:nth-child(4n) {
+    animation-name: webflow-logo-word-pop;
+  }
+
+  .webflow-logo-marquee-shell {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .webflow-logo-marquee {
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  }
+
+  .webflow-logo-track {
+    display: flex;
+    width: max-content;
+    gap: 0.25rem;
+    padding: 0.15rem 0;
+    animation: webflow-logo-marquee 34s linear infinite;
+    will-change: transform;
+  }
+
+  .webflow-logo-marquee.is-reverse .webflow-logo-track {
+    animation-direction: reverse;
+    animation-duration: 40s;
+  }
+
+  .webflow-logo-chip {
+    display: inline-flex;
+    flex: 0 0 auto;
+    width: clamp(8rem, 11vw, 11.5rem);
+    height: clamp(4.25rem, 6vw, 5.6rem);
+    align-items: center;
+    justify-content: center;
+    padding: 0.45rem 0.55rem;
+  }
+
+  .webflow-logo-chip img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center;
+    filter: drop-shadow(0 10px 22px rgba(20, 55, 120, 0.1)) saturate(1.02) contrast(1.02);
   }
 
   .webflow-proof-section {
@@ -1412,13 +1740,8 @@
     color: rgba(255, 255, 255, 0.66);
   }
 
-  .webflow-feature-card .webflow-card-arrow {
-    position: absolute;
-    right: 1.25rem;
-    bottom: 1.25rem;
-  }
-
   .webflow-final-section {
+    scroll-margin-top: 5rem;
     padding: 7.5rem 0 2rem;
     background: #eef2ff;
     color: #03050a;
@@ -1575,7 +1898,7 @@
   }
 
   .site-entry-loader-brand {
-    color: #146ef5;
+    color: #fff;
     opacity: 0;
     transform: translate3d(0, 0.9rem, 0);
     animation: site-entry-brand 640ms cubic-bezier(0.16, 1, 0.3, 1) 120ms forwards;
@@ -1585,7 +1908,7 @@
     display: inline-block;
     max-width: 0;
     overflow: hidden;
-    color: #fff;
+    color: #146ef5;
     opacity: 0;
     transform: translate3d(-0.35rem, 0, 0);
     animation: site-entry-domain 780ms cubic-bezier(0.16, 1, 0.3, 1) 760ms forwards;
@@ -1663,11 +1986,40 @@
     }
   }
 
+  @keyframes webflow-logo-marquee {
+    to {
+      transform: translate3d(-50%, 0, 0);
+    }
+  }
+
+  @keyframes webflow-logo-word-rise {
+    to {
+      opacity: 1;
+      transform: translate3d(0, 0, 0) rotateX(0deg);
+    }
+  }
+
+  @keyframes webflow-logo-word-pop {
+    0% {
+      opacity: 0;
+      transform: translate3d(0, 0.85em, 0) rotateX(24deg) scale(0.98);
+    }
+    70% {
+      opacity: 1;
+      transform: translate3d(0, -0.04em, 0) rotateX(0deg) scale(1.02);
+    }
+    to {
+      opacity: 1;
+      transform: translate3d(0, 0, 0) rotateX(0deg) scale(1);
+    }
+  }
+
   @media (max-width: 1023px) {
     .webflow-section-heading,
     .webflow-proof-layout,
     .webflow-industry-panel,
     .webflow-feature-heading,
+    .webflow-logo-heading,
     .webflow-final-card {
       grid-template-columns: 1fr;
     }
@@ -1677,7 +2029,8 @@
     }
 
     .webflow-section-heading .webflow-section-kicker,
-    .webflow-feature-heading .webflow-section-kicker {
+    .webflow-feature-heading .webflow-section-kicker,
+    .webflow-logo-heading .webflow-section-kicker {
       margin-bottom: 0;
     }
 
@@ -1736,7 +2089,52 @@
   }
 
   @media (max-width: 767px) {
+    .language-selector-shell {
+      --language-selector-height: 8.7rem;
+    }
+
+    .language-intro-container {
+      grid-template-columns: 1fr;
+      gap: 0.45rem;
+      align-content: center;
+      width: min(92%, 112rem);
+    }
+
+    .language-intro-copy {
+      font-size: 0.95rem;
+    }
+
+    .language-select-button {
+      grid-template-columns: minmax(0, 1fr) 3.45rem;
+      height: 3.35rem;
+    }
+
+    .language-button-label-wrapper {
+      padding: 0 1.15rem;
+    }
+
+    .language-button-label {
+      font-size: 0.94rem;
+    }
+
+    .language-options-wrapper {
+      top: calc(100% + 0.3rem);
+    }
+
+    .language-selector-actions {
+      justify-self: stretch;
+    }
+
+    .language-confirm-pill {
+      width: 100%;
+      height: 3.35rem !important;
+      min-height: 3.35rem;
+      padding-inline: 1.35rem !important;
+      font-size: 0.95rem !important;
+    }
+
     .webflow-platform-section,
+    .webflow-logo-section,
     .webflow-proof-section,
     .webflow-industries-section,
     .webflow-features-section {
@@ -1747,16 +2145,44 @@
       padding: 5rem 0 1.5rem;
     }
 
+    .webflow-logo-section {
+      padding: 0 0 5rem;
+    }
+
     .webflow-section-heading,
     .webflow-feature-heading {
       margin-bottom: 2.5rem;
     }
 
     .webflow-section-heading h2,
+    .webflow-logo-heading h2,
     .webflow-proof-copy h2,
     .webflow-feature-heading h2,
     .webflow-final-card h2 {
       font-size: clamp(2.9rem, 13vw, 4.8rem);
+    }
+
+    .webflow-logo-heading {
+      margin-bottom: 1.6rem;
+    }
+
+    .webflow-logo-marquee-shell {
+      gap: 0.75rem;
+    }
+
+    .webflow-logo-track {
+      gap: 0.2rem;
+      animation-duration: 28s;
+    }
+
+    .webflow-logo-marquee.is-reverse .webflow-logo-track {
+      animation-duration: 34s;
+    }
+
+    .webflow-logo-chip {
+      width: 8.4rem;
+      height: 4.15rem;
+      padding: 0.42rem 0.5rem;
     }
 
     .webflow-platform-card,
@@ -1812,14 +2238,25 @@
     .webflow-final-socials {
       display: grid;
       grid-template-columns: 1fr;
+      width: 100%;
       max-width: none;
       justify-content: stretch;
-      justify-items: center;
+      justify-self: stretch;
+      justify-items: stretch;
       text-align: center;
     }
 
     .webflow-final-socials a {
+      width: 100%;
+      min-width: 0;
       justify-content: center;
+      gap: 0.5rem;
+      font-size: clamp(1.1rem, 5.2vw, 1.55rem);
+    }
+
+    .webflow-final-socials a span {
+      min-width: 0;
+      overflow-wrap: anywhere;
     }
 
     .webflow-footer,
@@ -1832,12 +2269,22 @@
       padding: 5rem 0 4rem;
     }
 
+    .webflow-process-section {
+      --process-title-indent: 0rem;
+    }
+
     .webflow-tabs-copy {
       margin-bottom: 2.2rem;
     }
 
     .webflow-tabs-copy h2 {
-      font-size: clamp(3rem, 14vw, 4.8rem);
+      font-size: clamp(2.75rem, 12.4vw, 3.65rem);
+    }
+
+    .webflow-scroll-title-line {
+      flex-wrap: wrap;
+      overflow: visible;
+      white-space: normal;
     }
 
     .webflow-tabs-copy p {
@@ -1847,11 +2294,31 @@
 
     .webflow-tab-button {
       padding: 1.15rem 0;
-      font-size: 1.18rem;
+      align-items: flex-start;
+      gap: 0.75rem;
+      font-size: 1.06rem;
+      line-height: 1.18;
+      color: rgba(3, 5, 10, 0.76);
+    }
+
+    .webflow-tab-button span {
+      width: 1.75rem;
+      padding-top: 0.1rem;
+      font-size: 0.74rem;
+      color: rgba(3, 5, 10, 0.5);
+    }
+
+    .webflow-tab-item.is-active {
+      color: #03050a;
+    }
+
+    .webflow-tab-item.is-active .webflow-tab-panel {
+      max-height: 18rem;
     }
 
     .webflow-tab-panel p {
-      font-size: 0.96rem;
+      font-size: 0.92rem;
+      line-height: 1.5;
     }
 
     .webflow-tabs-visual {
@@ -1868,17 +2335,35 @@
     }
 
     .webflow-creation-card {
-      min-height: 16.5rem;
+      min-height: 12.75rem;
       align-items: flex-start;
-      padding-bottom: 10.5rem;
+      padding: 1.1rem;
+      padding-bottom: 6.9rem;
+    }
+
+    .webflow-creation-card h3 {
+      font-size: 1.18rem;
+      line-height: 1.12;
+    }
+
+    .webflow-creation-card p {
+      max-width: 12.5rem;
+      font-size: 0.84rem;
+      line-height: 1.3;
     }
 
     .webflow-preview-wrap {
       position: absolute;
-      right: 1.5rem;
-      bottom: 0;
-      width: 9rem;
-      max-width: 46%;
+      right: 0.9rem;
+      bottom: -0.2rem;
+      width: 6.8rem;
+      min-width: 0;
+      max-width: 42%;
+    }
+
+    .webflow-preview-inner {
+      height: calc(100% + 0.8rem);
+      inset: 0 0 -0.8rem;
     }
 
     .webflow-hero-fluted::before {
@@ -1896,6 +2381,8 @@
     .webflow-scroll-reveal,
     .webflow-industry-panel,
     .webflow-title-word,
+    .webflow-logo-heading h2 span,
+    .language-fixed-wrapper,
     .site-entry-loader-brand,
     .site-entry-loader-domain {
       opacity: 1;
@@ -1905,6 +2392,10 @@
     }
 
     .webflow-hero-fluted::before {
+      animation: none;
+    }
+
+    .webflow-logo-track {
       animation: none;
     }
 

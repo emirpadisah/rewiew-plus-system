@@ -1,12 +1,13 @@
 'use client'
 
-import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from 'react'
 import {
   ArrowRight,
   ArrowUpRight,
   BarChart3,
   Building2,
   Car,
+  ChevronDown,
   CheckCircle2,
   FileText,
   HeartPulse,
@@ -33,42 +34,73 @@ const whatsappContactHref = 'https://wa.me/905071331097'
 const mailContactHref = 'mailto:yorumup@gmail.com'
 const phoneContactHref = 'tel:+905071331097'
 const instagramContactHref = 'https://www.instagram.com/yorumup'
+const languageOptions = ['English', 'Türkçe'] as const
 
-const menuLinks = [
+const menuLinksTr = [
   { label: 'ANA SAYFA', href: '/' },
   { label: 'HAKKIMIZDA', href: '#about' },
   { label: 'SEKTÖRLER', href: '#sectors' },
   { label: 'İLETİŞİM', href: whatsappContactHref },
 ]
 
+const menuLinksEn = [
+  { label: 'HOME', href: '/' },
+  { label: 'ABOUT', href: '#about' },
+  { label: 'SECTORS', href: '#sectors' },
+  { label: 'CONTACT', href: whatsappContactHref },
+]
+
 type HeroPreview = 'dashboard' | 'customers' | 'messages'
+type LanguageOption = (typeof languageOptions)[number]
 
 const heroChoices: Array<{
   benefit: string
   title: string
   description: string
-  href: string
   preview: HeroPreview
 }> = [
   {
     benefit: '01',
     title: 'Daha fazla yorum al',
     description: 'Doğru müşteriye doğru anda WhatsApp daveti göndererek yorum dönüşlerini artır.',
-    href: '/business',
     preview: 'dashboard',
   },
   {
     benefit: '02',
     title: 'Süreci tek panelde tut',
     description: 'Müşteri listesi, kategoriler, CSV aktarımı ve limitleri dağılmadan yönet.',
-    href: '/business/customers',
     preview: 'customers',
   },
   {
     benefit: '03',
     title: 'Gönderimi hızlandır',
     description: 'Şablon seç, müşterileri işaretle ve review linklerini toplu şekilde gönder.',
-    href: '/business/send-message',
+    preview: 'messages',
+  },
+]
+
+const heroChoicesEn: Array<{
+  benefit: string
+  title: string
+  description: string
+  preview: HeroPreview
+}> = [
+  {
+    benefit: '01',
+    title: 'Get more reviews',
+    description: 'Increase review responses by sending WhatsApp invites to the right customers at the right time.',
+    preview: 'dashboard',
+  },
+  {
+    benefit: '02',
+    title: 'Manage everything in one panel',
+    description: 'Handle customer lists, categories, CSV import and limits without losing track.',
+    preview: 'customers',
+  },
+  {
+    benefit: '03',
+    title: 'Speed up sending',
+    description: 'Choose a template, mark customers and send review links in bulk.',
     preview: 'messages',
   },
 ]
@@ -78,7 +110,6 @@ const processSteps = [
     number: '01',
     title: 'Müşterilerini içeri al',
     description: 'CSV ile toplu yükle veya tek tek ekle. Kategoriler, notlar ve müşteri limitleri tek panelde düzenli kalır.',
-    cta: 'Müşteri listesini incele',
     image: '/landing/step-customers.png',
     alt: 'YorumUp müşteri listesi ekranı',
   },
@@ -86,7 +117,6 @@ const processSteps = [
     number: '02',
     title: 'WhatsApp hesabını bağla',
     description: 'QR kodu tara, bağlantı durumunu takip et ve mesaj göndermeye hazır olup olmadığını anında gör.',
-    cta: 'Bağlantı adımını gör',
     image: '/landing/step-whatsapp.png',
     alt: 'YorumUp WhatsApp bağlantısı ekranı',
   },
@@ -94,9 +124,32 @@ const processSteps = [
     number: '03',
     title: 'Yorum linkini gönder',
     description: 'Şablonu seç, müşterileri işaretle ve review linklerini dakikalar içinde toplu şekilde gönder.',
-    cta: 'Gönderim akışına bak',
     image: '/landing/step-send-message.png',
     alt: 'YorumUp mesaj gönderme ekranı',
+  },
+]
+
+const processStepsEn = [
+  {
+    number: '01',
+    title: 'Import your customers',
+    description: 'Upload in bulk with CSV or add individually. Keep categories, notes and customer limits organized in one panel.',
+    image: '/landing/step-customers.png',
+    alt: 'YorumUp customer list screen',
+  },
+  {
+    number: '02',
+    title: 'Connect your WhatsApp',
+    description: 'Scan the QR code, monitor connection status and see when you are ready to send messages.',
+    image: '/landing/step-whatsapp.png',
+    alt: 'YorumUp WhatsApp connection screen',
+  },
+  {
+    number: '03',
+    title: 'Send the review link',
+    description: 'Pick a template, mark customers and collect review links in minutes.',
+    image: '/landing/step-send-message.png',
+    alt: 'YorumUp send message screen',
   },
 ]
 
@@ -104,7 +157,6 @@ const platformCards: Array<{
   eyebrow: string
   title: string
   description: string
-  href: string
   cta: string
   image: string
   imageAlt: string
@@ -117,7 +169,6 @@ const platformCards: Array<{
     eyebrow: 'Build',
     title: 'Müşteri listesini büyüt',
     description: 'CSV aktarımı, kategoriler ve müşteri notlarıyla yorum isteyeceğin kitleyi tek yerde düzenle.',
-    href: '/business/customers',
     cta: 'Listeyi oluştur',
     image: '/landing/customer-workflow-photo.jpg',
     imageAlt: 'Müşteri ve iş akışı yönetimi için dizüstü bilgisayarla çalışan ekip',
@@ -130,7 +181,6 @@ const platformCards: Array<{
     eyebrow: 'Publish',
     title: 'WhatsApp davetlerini gönder',
     description: 'Şablonunu seç, hedef müşterileri işaretle ve yorum linkini doğru zamanda WhatsApp ile ilet.',
-    href: '/business/send-message',
     cta: 'Davet gönder',
     image: '/landing/whatsapp-message-photo.jpg',
     imageAlt: 'Telefonda WhatsApp ve mesajlaşma uygulamaları',
@@ -143,7 +193,6 @@ const platformCards: Array<{
     eyebrow: 'Optimize',
     title: 'Yorum dönüşlerini takip et',
     description: 'Başarılı ve başarısız gönderimleri gör, günlük akışı izle ve işletmenin yorum ritmini düzenli tut.',
-    href: '/business/messages',
     cta: 'Akışı takip et',
     image: '/landing/analytics-dashboard-photo.jpg',
     imageAlt: 'Dizüstü bilgisayar ekranında performans ve analiz grafikleri',
@@ -154,11 +203,97 @@ const platformCards: Array<{
   },
 ]
 
+const platformCardsEn: Array<{
+  eyebrow: string
+  title: string
+  description: string
+  cta: string
+  image: string
+  imageAlt: string
+  icon: ReactNode
+  stat: string
+  statLabel: string
+  tags: string[]
+}> = [
+  {
+    eyebrow: 'Build',
+    title: 'Grow your customer list',
+    description: 'Organize your audience with CSV import, categories and customer notes in one place.',
+    cta: 'Create list',
+    image: '/landing/customer-workflow-photo.jpg',
+    imageAlt: 'Team working with laptop for customer and workflow management',
+    icon: <Users className="h-5 w-5" />,
+    stat: '620',
+    statLabel: 'customers in one panel',
+    tags: ['CSV', 'Category', 'Limit'],
+  },
+  {
+    eyebrow: 'Publish',
+    title: 'Send WhatsApp invites',
+    description: 'Pick a template, mark target customers and deliver review links via WhatsApp.',
+    cta: 'Send invite',
+    image: '/landing/whatsapp-message-photo.jpg',
+    imageAlt: 'WhatsApp and messaging apps on a phone',
+    icon: <Send className="h-5 w-5" />,
+    stat: '38',
+    statLabel: 'today invites',
+    tags: ['Template', 'Bulk select', 'Review link'],
+  },
+  {
+    eyebrow: 'Optimize',
+    title: 'Track review responses',
+    description: 'See successful and failed sends, monitor daily flow and keep the review rhythm steady.',
+    cta: 'Track flow',
+    image: '/landing/analytics-dashboard-photo.jpg',
+    imageAlt: 'Laptop screen with performance and analytics charts',
+    icon: <TrendingUp className="h-5 w-5" />,
+    stat: '94%',
+    statLabel: 'successful sends',
+    tags: ['History', 'Status', 'Report'],
+  },
+]
+
 const proofMetrics = [
   { value: '1.248', label: 'demo davet akışı', detail: 'Toplu mesaj ekranında planlanan yorum davetleri.' },
   { value: '94%', label: 'başarılı gönderim', detail: 'Gönderim geçmişinde izlenen örnek başarı oranı.' },
   { value: '38', label: 'bugünkü davet', detail: 'Günlük ritmi takip etmek için öne çıkan panel metriği.' },
   { value: '620', label: 'müşteri kaydı', detail: 'Kategori ve CSV ile yönetilen örnek müşteri havuzu.' },
+]
+
+const proofMetricsEn = [
+  { value: '1,248', label: 'demo invites', detail: 'Planned review invites on the bulk message screen.' },
+  { value: '94%', label: 'successful sends', detail: 'Example success rate tracked in send history.' },
+  { value: '38', label: 'today invites', detail: 'Highlight metric to follow daily rhythm.' },
+  { value: '620', label: 'customer records', detail: 'Sample customer pool managed with categories and CSV.' },
+]
+
+const partnerLogos = [
+  { name: 'Learnova', src: '/logos/transparent/logo-01.png', alt: 'Learnova logosu' },
+  { name: 'Lexington Law Firm', src: '/logos/transparent/logo-02.png', alt: 'Lexington Law Firm logosu' },
+  { name: 'Ufuk Gezgin', src: '/logos/transparent/logo-03.png', alt: 'Ufuk Gezgin logosu' },
+  { name: 'Iron Reign Gym', src: '/logos/transparent/logo-04.png', alt: 'Iron Reign Gym logosu' },
+  { name: 'E-ticaret markası', src: '/logos/transparent/logo-05.png', alt: 'E-ticaret markası logosu' },
+  { name: 'The Hearth Coffee Co.', src: '/logos/transparent/logo-06.png', alt: 'The Hearth Coffee Co. logosu' },
+  { name: 'Güler Diş Kliniği', src: '/logos/transparent/logo-07.png', alt: 'Güler Diş Kliniği logosu' },
+  { name: 'Keskin Berber Dükkanı', src: '/logos/transparent/logo-08.png', alt: 'Keskin Berber Dükkanı logosu' },
+  { name: 'Zihin Denge', src: '/logos/transparent/logo-09.png', alt: 'Zihin Denge logosu' },
+  { name: 'MiyavPati', src: '/logos/transparent/logo-10.png', alt: 'MiyavPati Veteriner Kliniği logosu' },
+]
+
+const partnerLogoRows = [
+  partnerLogos,
+  [
+    partnerLogos[6],
+    partnerLogos[8],
+    partnerLogos[3],
+    partnerLogos[5],
+    partnerLogos[9],
+    partnerLogos[4],
+    partnerLogos[2],
+    partnerLogos[7],
+    partnerLogos[1],
+    partnerLogos[0],
+  ],
 ]
 
 const industryTabs: Array<{
@@ -223,46 +358,138 @@ const industryTabs: Array<{
   },
 ]
 
+const industryTabsEn: Array<{
+  key: string
+  label: string
+  icon: ReactNode
+  title: string
+  description: string
+  image: string
+  imageAlt: string
+  metric: string
+  metricLabel: string
+  benefits: string[]
+}> = [
+  {
+    key: 'hotels',
+    label: 'Hotels',
+    icon: <Building2 className="h-4 w-4" />,
+    title: 'Collect post-stay reviews',
+    description: 'Segment guests after check-out and request reviews at the right time.',
+    image: '/landing/industry-hotel.jpg',
+    imageAlt: 'Modern hotel reception and lobby area',
+    metric: '38',
+    metricLabel: 'today invites',
+    benefits: ['Quick WhatsApp invite after check-out', 'Room type and guest categories', 'Daily send control'],
+  },
+  {
+    key: 'clinics',
+    label: 'Clinics',
+    icon: <HeartPulse className="h-4 w-4" />,
+    title: 'Make satisfied patient experiences visible',
+    description: 'Collect trustworthy reviews with polite post-appointment message templates.',
+    image: '/landing/industry-clinic.jpg',
+    imageAlt: 'Clean and modern clinic exam room',
+    metric: '94%',
+    metricLabel: 'successful sends',
+    benefits: ['Personal invite after appointment', 'Category by service type', 'Message history and error tracking'],
+  },
+  {
+    key: 'auto',
+    label: 'Auto services',
+    icon: <Car className="h-4 w-4" />,
+    title: "Don't miss reviews after delivery",
+    description: 'Separate customers by maintenance, repair and inspections; send review links from one panel after delivery.',
+    image: '/landing/industry-auto-service.jpg',
+    imageAlt: 'Car in a modern auto service garage',
+    metric: '620',
+    metricLabel: 'registered customers',
+    benefits: ['Service-type segmentation', 'Pre-send bulk selection', 'Real-time connection status'],
+  },
+  {
+    key: 'beauty',
+    label: 'Beauty salons',
+    icon: <Sparkles className="h-4 w-4" />,
+    title: 'Turn satisfaction into social proof',
+    description: 'Reach customers with a warm message after service and deliver review links reliably.',
+    image: '/landing/industry-beauty-salon.jpg',
+    imageAlt: 'Modern beauty salon interior',
+    metric: '1,248',
+    metricLabel: 'demo invites',
+    benefits: ['Service-based message templates', 'Persistent customer lists', 'Fast tracking and re-sends'],
+  },
+]
+
 const featureCards: Array<{
   title: string
   description: string
-  href: string
   icon: ReactNode
 }> = [
   {
     title: 'CSV aktarımı',
     description: 'Mevcut müşteri listenizi dakikalar içinde panele alın.',
-    href: '/business/customers',
     icon: <Upload className="h-5 w-5" />,
   },
   {
     title: 'Mesaj şablonları',
     description: 'Yorum davetlerini markanızın diline göre standartlaştırın.',
-    href: '/business/message-templates',
     icon: <FileText className="h-5 w-5" />,
   },
   {
     title: 'WhatsApp bağlantısı',
     description: 'QR ile bağlanın, durumunuzu panelden takip edin.',
-    href: '/business/whatsapp',
     icon: <Link2 className="h-5 w-5" />,
   },
   {
     title: 'Gönderim geçmişi',
     description: 'Başarılı ve başarısız mesajları aynı akışta görün.',
-    href: '/business/messages',
     icon: <History className="h-5 w-5" />,
   },
   {
     title: 'Kategori yönetimi',
     description: 'Müşterileri hizmet, şube veya önceliğe göre gruplayın.',
-    href: '/business/customers',
     icon: <Tags className="h-5 w-5" />,
   },
   {
     title: 'Limit kontrolü',
     description: 'Paket ve günlük gönderim sınırlarını net şekilde izleyin.',
-    href: '/business',
+    icon: <ShieldCheck className="h-5 w-5" />,
+  },
+]
+
+const featureCardsEn: Array<{
+  title: string
+  description: string
+  icon: ReactNode
+}> = [
+  {
+    title: 'CSV import',
+    description: 'Bring your existing customer list to the panel in minutes.',
+    icon: <Upload className="h-5 w-5" />,
+  },
+  {
+    title: 'Message templates',
+    description: "Standardize review invites in your brand's voice.",
+    icon: <FileText className="h-5 w-5" />,
+  },
+  {
+    title: 'WhatsApp connection',
+    description: 'Connect via QR and monitor status from the panel.',
+    icon: <Link2 className="h-5 w-5" />,
+  },
+  {
+    title: 'Send history',
+    description: 'See successful and failed messages in the same flow.',
+    icon: <History className="h-5 w-5" />,
+  },
+  {
+    title: 'Category management',
+    description: 'Group customers by service, branch or priority.',
+    icon: <Tags className="h-5 w-5" />,
+  },
+  {
+    title: 'Limit control',
+    description: 'Monitor package and daily send limits clearly.',
     icon: <ShieldCheck className="h-5 w-5" />,
   },
 ]
@@ -331,7 +558,123 @@ function PillButton({
   )
 }
 
-function HeroPanelPreview({ choice }: { choice: (typeof heroChoices)[number] }) {
+function LanguageSelectorBar({
+  selectedLanguage,
+  onLanguageChange,
+  onConfirm,
+  scrollProgress,
+  onShellElementChange,
+  texts,
+}: {
+  selectedLanguage: LanguageOption
+  onLanguageChange: (language: LanguageOption) => void
+  onConfirm: () => void
+  scrollProgress: number
+  onShellElementChange: (element: HTMLElement | null) => void
+  texts?: {
+    introCopy?: string
+    chooseLabel?: string
+    confirmLabel?: string
+    optionSubLabelDefault?: string
+    optionSubLabelAvailable?: string
+  }
+}) {
+  const [isOptionsOpen, setIsOptionsOpen] = useState(false)
+
+  const handleConfirm = () => {
+    setIsOptionsOpen(false)
+    onConfirm()
+  }
+
+  return (
+    <section
+      ref={onShellElementChange}
+      data-component="n3-multi-language"
+      data-variant="top"
+      className={`language-selector-shell ${isOptionsOpen ? 'is-select-expanded' : ''}`}
+      style={{ '--language-scroll-progress': scrollProgress } as CSSProperties}
+      aria-label="Language selector"
+    >
+      <div className="language-fixed-wrapper" data-ref="fixed-wrapper">
+        <div className="language-intro-container" data-ref="intro-container">
+          <p className="language-intro-copy">{texts?.introCopy ?? 'Choose your language'}</p>
+
+          <div className={`language-select ${isOptionsOpen ? 'is-expanded' : ''}`} data-component="cl-m4-select">
+            <div className="language-select-wrapper">
+              <button
+                type="button"
+                className="language-select-button"
+                aria-haspopup="listbox"
+                aria-expanded={isOptionsOpen}
+                onClick={() => setIsOptionsOpen((isOpen) => !isOpen)}
+              >
+                <span className="language-button-label-wrapper">
+                  <span className="language-button-label">{selectedLanguage}</span>
+                </span>
+                <span className="language-button-icon-wrapper" aria-hidden="true">
+                  <ChevronDown className="h-5 w-5" />
+                </span>
+              </button>
+
+              <div className="language-options-wrapper">
+                <div className="language-options-header">
+                  <p>{texts?.chooseLabel ?? 'Choose your language'}</p>
+                  <button
+                    type="button"
+                    className="language-options-close-button"
+                    onClick={() => setIsOptionsOpen(false)}
+                    aria-label="Close language options"
+                  >
+                    <ChevronDown className="h-5 w-5 rotate-180" />
+                  </button>
+                </div>
+
+                <div className="language-options-scroll-container">
+                  <ul className="language-select-options" role="listbox" aria-label="Choose your language">
+                    {languageOptions.map((language) => (
+                      <li key={language} className="language-select-option">
+                        <button
+                          type="button"
+                          className="language-custom-select-option"
+                          role="option"
+                          aria-selected={selectedLanguage === language}
+                          onClick={() => {
+                            onLanguageChange(language)
+                            setIsOptionsOpen(false)
+                          }}
+                        >
+                          <span className="language-selected-option-indicator" aria-hidden="true" />
+                          <span className="language-option-label-wrapper">
+                            <span className="language-option-label">{language}</span>
+                            <span className="language-option-sub-label">
+                              {language === 'English'
+                                ? texts?.optionSubLabelDefault ?? 'Default Language'
+                                : texts?.optionSubLabelAvailable ?? 'Available language'}
+                            </span>
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="language-selector-actions">
+            <PillButton onClick={handleConfirm} tone="light" className="language-confirm-pill">
+              {texts?.confirmLabel ?? 'Confirm'}
+            </PillButton>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function HeroPanelPreview({ choice, language }: { choice: (typeof heroChoices)[number], language: LanguageOption }) {
+  const isEn = language === 'English'
+
   if (choice.preview === 'dashboard') {
     return (
       <div className="webflow-preview-wrap">
@@ -344,10 +687,10 @@ function HeroPanelPreview({ choice }: { choice: (typeof heroChoices)[number] }) 
             </div>
             <div className="grid grid-cols-2 gap-2 p-3">
               {[
-                ['Toplam', '1.248', 'bg-[#edf5ff]'],
-                ['Başarılı', '94%', 'bg-[#e9fbf2]'],
-                ['Bugün', '38', 'bg-[#fff6e6]'],
-                ['Müşteri', '620', 'bg-[#f2efff]'],
+                [isEn ? 'Total' : 'Toplam', '1.248', 'bg-[#edf5ff]'],
+                [isEn ? 'Success' : 'Başarılı', '94%', 'bg-[#e9fbf2]'],
+                [isEn ? 'Today' : 'Bugün', '38', 'bg-[#fff6e6]'],
+                [isEn ? 'Customer' : 'Müşteri', '620', 'bg-[#f2efff]'],
               ].map(([label, value, tone]) => (
                 <div key={label} className={`rounded-[5px] p-2 ${tone}`}>
                   <div className="mb-1 text-[7px] font-semibold text-[#617089]">{label}</div>
@@ -358,7 +701,7 @@ function HeroPanelPreview({ choice }: { choice: (typeof heroChoices)[number] }) 
             <div className="mx-3 rounded-[5px] border border-[#dce5f2] bg-white p-2">
               <div className="mb-2 flex items-center gap-1.5">
                 <BarChart3 className="h-3 w-3 text-[#146ef5]" />
-                <span className="text-[7px] font-bold text-[#6b778c]">Son mesajlar</span>
+                <span className="text-[7px] font-bold text-[#6b778c]">{isEn ? 'Recent messages' : 'Son mesajlar'}</span>
               </div>
               {[72, 48, 88, 56].map((width, index) => (
                 <div key={index} className="mb-1.5 h-1.5 rounded-full bg-[#e7edf7]">
@@ -368,7 +711,6 @@ function HeroPanelPreview({ choice }: { choice: (typeof heroChoices)[number] }) 
             </div>
           </div>
         </div>
-        <div className="webflow-circle-btn" aria-hidden="true" />
       </div>
     )
   }
@@ -383,7 +725,7 @@ function HeroPanelPreview({ choice }: { choice: (typeof heroChoices)[number] }) 
               <span className="flex h-4 w-4 items-center justify-center rounded bg-[#146ef5] text-white">
                 <Upload className="h-2.5 w-2.5" />
               </span>
-              <span className="text-[8px] font-black">Müşteriler</span>
+              <span className="text-[8px] font-black">{isEn ? 'Customers' : 'Müşteriler'}</span>
               <span className="ml-auto rounded-full bg-[#dff7eb] px-2 py-0.5 text-[7px] font-bold text-[#117448]">
                 CSV
               </span>
@@ -391,9 +733,9 @@ function HeroPanelPreview({ choice }: { choice: (typeof heroChoices)[number] }) 
             <div className="space-y-2 p-3">
               {[
                 ['Ayşe Demir', 'VIP', '#146ef5'],
-                ['Mert Kaya', 'Yeni', '#10b981'],
-                ['Selin Öz', 'Daimi', '#7a3dff'],
-                ['Can Arda', 'Kafe', '#ff6b00'],
+                ['Mert Kaya', isEn ? 'New' : 'Yeni', '#10b981'],
+                ['Selin Öz', isEn ? 'Regular' : 'Daimi', '#7a3dff'],
+                ['Can Arda', isEn ? 'Cafe' : 'Kafe', '#ff6b00'],
               ].map(([name, tag, color]) => (
                 <div key={name} className="grid grid-cols-[12px_1fr_auto] items-center gap-2 rounded-[5px] border border-[#e4ebf5] bg-white px-2 py-1.5">
                   <span className="h-3 w-3 rounded-[3px] border border-[#c8d4e3]" />
@@ -406,7 +748,6 @@ function HeroPanelPreview({ choice }: { choice: (typeof heroChoices)[number] }) 
             </div>
           </div>
         </div>
-        <div className="webflow-circle-btn" aria-hidden="true" />
       </div>
     )
   }
@@ -417,33 +758,32 @@ function HeroPanelPreview({ choice }: { choice: (typeof heroChoices)[number] }) 
       <div className="webflow-preview-inner">
         <div className="h-full overflow-hidden rounded-t-[2px] border border-white/45 bg-[#f8fafc] text-[#0c1324] shadow-2xl">
           <div className="flex h-8 items-center justify-between border-b border-[#d9e2ee] px-3">
-            <span className="text-[8px] font-black">Mesaj önizleme</span>
+            <span className="text-[8px] font-black">{isEn ? 'Message preview' : 'Mesaj önizleme'}</span>
             <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#146ef5] text-white">
               <Send className="h-2.5 w-2.5" />
             </span>
           </div>
           <div className="p-3">
             <div className="mb-3 rounded-[6px] border-2 border-dashed border-[#bed0e7] bg-[#edf4ff] p-2">
-              <div className="mb-1 text-[7px] font-black text-[#5b6b82]">Örnek mesaj</div>
+              <div className="mb-1 text-[7px] font-black text-[#5b6b82]">{isEn ? 'Sample message' : 'Örnek mesaj'}</div>
               <p className="text-[8px] font-semibold leading-snug text-[#152033]">
-                Merhaba Deniz, deneyimini yorum olarak paylaşır mısın?
+                {isEn ? 'Hi Deniz, would you mind sharing your experience as a review?' : 'Merhaba Deniz, deneyimini yorum olarak paylaşır mısın?'}
               </p>
             </div>
             <div className="mb-3 grid grid-cols-3 gap-1.5">
-              {['VIP', 'Yeni', 'Kafe'].map((label) => (
+              {['VIP', isEn ? 'New' : 'Yeni', isEn ? 'Cafe' : 'Kafe'].map((label) => (
                 <span key={label} className="rounded-full bg-[#eef2f7] px-2 py-1 text-center text-[7px] font-bold text-[#42526a]">
                   {label}
                 </span>
               ))}
             </div>
             <div className="flex items-center justify-between rounded-[6px] bg-[#101827] px-2.5 py-2 text-white">
-              <span className="text-[8px] font-bold">38 seçili</span>
+              <span className="text-[8px] font-bold">{isEn ? '38 selected' : '38 seçili'}</span>
               <CheckCircle2 className="h-3.5 w-3.5 text-[#3ce681]" />
             </div>
           </div>
         </div>
       </div>
-      <div className="webflow-circle-btn" aria-hidden="true" />
     </div>
   )
 }
@@ -451,13 +791,14 @@ function HeroPanelPreview({ choice }: { choice: (typeof heroChoices)[number] }) 
 function HeroChoiceCard({
   choice,
   index,
+  language,
 }: {
   choice: (typeof heroChoices)[number]
   index: number
+  language: LanguageOption
 }) {
   return (
-    <a
-      href={choice.href}
+    <article
       className="webflow-creation-card group"
       style={{ animationDelay: `${620 + index * 110}ms` }}
     >
@@ -473,12 +814,14 @@ function HeroChoiceCard({
           </p>
         </div>
       </div>
-      <HeroPanelPreview choice={choice} />
-    </a>
+      <HeroPanelPreview choice={choice} language={language} />
+    </article>
   )
 }
 
-function ProcessStepsSection() {
+function ProcessStepsSection({ language }: { language: LanguageOption }) {
+  const isEn = language === 'English'
+  const steps = isEn ? processStepsEn : processSteps
   const [activeStep, setActiveStep] = useState(0)
   const [isTitleVisible, setIsTitleVisible] = useState(false)
   const sectionRef = useRef<HTMLElement | null>(null)
@@ -525,28 +868,47 @@ function ProcessStepsSection() {
       <div className="webflow-process-pin">
         <div className="webflow-process-container">
           <div className="webflow-tabs-copy">
-            <span>3 adımda kurulum</span>
+            <span>{isEn ? 'Setup in 3 steps' : '3 adımda kurulum'}</span>
             <h2>
               <span className="webflow-scroll-title-line is-first">
-                <span className="webflow-title-word">Daha</span>
-                <span className="webflow-title-word">fazla</span>
-                <span className="webflow-title-word">yorumu</span>
+                {isEn ? (
+                  <>
+                    <span className="webflow-title-word">Collect</span>
+                    <span className="webflow-title-word">more</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="webflow-title-word">Daha</span>
+                    <span className="webflow-title-word">fazla</span>
+                    <span className="webflow-title-word">yorumu</span>
+                  </>
+                )}
               </span>
               <span className="webflow-scroll-title-line is-second">
-                <span className="webflow-title-word">sistemli</span>
-                <span className="webflow-title-word">topla</span>
+                {isEn ? (
+                  <>
+                    <span className="webflow-title-word">reviews</span>
+                    <span className="webflow-title-word">easily</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="webflow-title-word">sistemli</span>
+                    <span className="webflow-title-word">topla</span>
+                  </>
+                )}
               </span>
             </h2>
             <p>
-              Müşteri listesinden WhatsApp bağlantısına, gönderim ekranından takip sürecine kadar
-              tüm akış tek yerde ilerler.
+              {isEn 
+                ? 'From customer list to WhatsApp connection, sending screen to tracking process, the entire flow proceeds in one place.' 
+                : 'Müşteri listesinden WhatsApp bağlantısına, gönderim ekranından takip sürecine kadar tüm akış tek yerde ilerler.'}
             </p>
           </div>
 
         <div className="webflow-tabs-layout">
           <div className="webflow-tabs-left">
-            <div className="webflow-tabs-list" role="tablist" aria-label="YorumUp kullanım adımları">
-              {processSteps.map((step, index) => {
+            <div className="webflow-tabs-list" role="tablist" aria-label={isEn ? 'YorumUp usage steps' : 'YorumUp kullanım adımları'}>
+              {steps.map((step, index) => {
                 const isActive = activeStep === index
 
                 return (
@@ -568,10 +930,6 @@ function ProcessStepsSection() {
                     </button>
                     <div className="webflow-tab-panel">
                       <p>{step.description}</p>
-                      <a href="/business">
-                        {step.cta}
-                        <span aria-hidden="true">→</span>
-                      </a>
                     </div>
                   </div>
                 )
@@ -580,7 +938,7 @@ function ProcessStepsSection() {
           </div>
 
           <div className="webflow-tabs-visual" aria-live="polite">
-            {processSteps.map((step, index) => (
+            {steps.map((step, index) => (
               <figure
                 key={step.image}
                 id={`yorumup-step-panel-${index}`}
@@ -601,16 +959,14 @@ function ProcessStepsSection() {
 }
 
 function WebflowArrowLink({
-  href,
   children,
   tone = 'dark',
 }: {
-  href: string
   children: string
   tone?: 'dark' | 'light'
 }) {
   return (
-    <a href={href} className={`webflow-arrow-link ${tone === 'light' ? 'is-light' : ''}`}>
+    <a href="#contact" className={`webflow-arrow-link ${tone === 'light' ? 'is-light' : ''}`}>
       <RollingText>{children}</RollingText>
       <span aria-hidden="true">
         <ArrowRight className="h-4 w-4" />
@@ -619,24 +975,27 @@ function WebflowArrowLink({
   )
 }
 
-function PlatformCardsSection() {
+function PlatformCardsSection({ language }: { language: LanguageOption }) {
+  const isEn = language === 'English'
+  const cards = isEn ? platformCardsEn : platformCards
+
   return (
     <section id="about" data-header-tone="light" className="webflow-continuation-section webflow-platform-section">
       <div className="webflow-section-inner">
         <div className="webflow-section-heading webflow-scroll-reveal">
-          <span className="webflow-section-kicker">Yorum toplama sistemi</span>
-          <h2>Her yorumu rastlantıya bırakmadan topla.</h2>
+          <span className="webflow-section-kicker">{isEn ? 'Review collection system' : 'Yorum toplama sistemi'}</span>
+          <h2>{isEn ? 'Collect every review without leaving it to chance.' : 'Her yorumu rastlantıya bırakmadan topla.'}</h2>
           <p>
-            YorumUp, müşterilerinizi düzenli şekilde kaydetmenizi, WhatsApp üzerinden yorum daveti
-            göndermenizi ve tüm gönderim sürecini tek panelden takip etmenizi sağlar.
+            {isEn 
+              ? 'YorumUp allows you to systematically record your customers, send review invites via WhatsApp, and track the entire sending process from a single panel.' 
+              : 'YorumUp, müşterilerinizi düzenli şekilde kaydetmenizi, WhatsApp üzerinden yorum daveti göndermenizi ve tüm gönderim sürecini tek panelden takip etmenizi sağlar.'}
           </p>
         </div>
 
         <div className="webflow-platform-grid">
-          {platformCards.map((card, index) => (
-            <a
+          {cards.map((card, index) => (
+            <article
               key={card.title}
-              href={card.href}
               className="webflow-platform-card webflow-scroll-reveal"
               style={{ animationDelay: `${index * 90}ms` }}
             >
@@ -661,11 +1020,8 @@ function PlatformCardsSection() {
                   <strong>{card.stat}</strong>
                   {card.statLabel}
                 </span>
-                <span className="webflow-card-arrow" aria-hidden="true">
-                  <ArrowUpRight className="h-5 w-5" />
-                </span>
               </div>
-            </a>
+            </article>
           ))}
         </div>
       </div>
@@ -673,23 +1029,81 @@ function PlatformCardsSection() {
   )
 }
 
-function ProofMetricsSection() {
+function LogoMarqueeSection({ language }: { language: LanguageOption }) {
+  const isEn = language === 'English'
+  const headerWords = isEn 
+    ? ['Customer', 'experiences', 'turning', 'into', 'reviews', 'in', 'every', 'sector.']
+    : ['Her', 'sektörde', 'yoruma', 'dönüşen', 'müşteri', 'deneyimleri.']
+
+  return (
+    <section data-header-tone="light" className="webflow-logo-section">
+      <div className="webflow-section-inner">
+        <div className="webflow-logo-heading webflow-scroll-reveal">
+          <span className="webflow-section-kicker">{isEn ? 'Businesses using YorumUp' : 'YorumUp kullanan işletmeler'}</span>
+          <h2 aria-label={isEn ? 'Customer experiences turning into reviews in every sector.' : 'Her sektörde yoruma dönüşen müşteri deneyimleri.'}>
+            {headerWords.map((word, index) => (
+              <span key={word} style={{ animationDelay: `${index * 90}ms` }}>
+                {word}
+              </span>
+            ))}
+          </h2>
+        </div>
+      </div>
+
+      <div className="webflow-logo-marquee-shell" aria-label={isEn ? 'Businesses using YorumUp' : 'YorumUp kullanan işletmeler'}>
+        {partnerLogoRows.map((row, rowIndex) => (
+          <div
+            key={rowIndex}
+            className={`webflow-logo-marquee ${rowIndex % 2 === 1 ? 'is-reverse' : ''}`}
+          >
+            <div className="webflow-logo-track">
+              {[...row, ...row].map((logo, index) => {
+                const isDuplicate = index >= row.length
+
+                return (
+                  <span
+                    key={`${logo.name}-${index}`}
+                    className="webflow-logo-chip"
+                    aria-hidden={isDuplicate}
+                  >
+                    <img
+                      src={logo.src}
+                      alt={isDuplicate ? '' : logo.alt}
+                      loading="lazy"
+                      draggable={false}
+                    />
+                  </span>
+                )
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function ProofMetricsSection({ language }: { language: LanguageOption }) {
+  const isEn = language === 'English'
+  const metrics = isEn ? proofMetricsEn : proofMetrics
+
   return (
     <section data-header-tone="dark" className="webflow-proof-section">
       <div className="webflow-section-inner">
         <div className="webflow-proof-layout">
           <div className="webflow-proof-copy webflow-scroll-reveal">
-            <span className="webflow-section-kicker">Demo panel verileri</span>
-            <h2>Yorum akışını rakamlarla yönet.</h2>
+            <span className="webflow-section-kicker">{isEn ? 'Demo panel data' : 'Demo panel verileri'}</span>
+            <h2>{isEn ? 'Manage your review flow with numbers.' : 'Yorum akışını rakamlarla yönet.'}</h2>
             <p>
-              Metrikler gerçek müşteri iddiası değil; ürün panelinde takip edilen yorum daveti akışını
-              anlatan örnek ekran verileridir.
+              {isEn
+                ? 'These metrics are not real customer claims; they are sample screen data showing the review invite flow tracked in the product panel.'
+                : 'Metrikler gerçek müşteri iddiası değil; ürün panelinde takip edilen yorum daveti akışını anlatan örnek ekran verileridir.'}
             </p>
-            <WebflowArrowLink href="/business">Paneli incele</WebflowArrowLink>
+            <WebflowArrowLink>{isEn ? 'View panel' : 'Paneli incele'}</WebflowArrowLink>
           </div>
 
           <div className="webflow-metric-grid">
-            {proofMetrics.map((metric, index) => (
+            {metrics.map((metric, index) => (
               <article
                 key={metric.label}
                 className="webflow-metric-card webflow-scroll-reveal"
@@ -707,25 +1121,28 @@ function ProofMetricsSection() {
   )
 }
 
-function IndustryTabsSection() {
-  const [activeIndustry, setActiveIndustry] = useState(industryTabs[0].key)
-  const active = industryTabs.find((industry) => industry.key === activeIndustry) ?? industryTabs[0]
+function IndustryTabsSection({ language }: { language: LanguageOption }) {
+  const isEn = language === 'English'
+  const tabs = isEn ? industryTabsEn : industryTabs
+  const [activeIndustry, setActiveIndustry] = useState(tabs[0].key)
+  const active = tabs.find((industry) => industry.key === activeIndustry) ?? tabs[0]
 
   return (
     <section id="sectors" data-header-tone="light" className="webflow-industries-section">
       <div className="webflow-section-inner">
         <div className="webflow-section-heading webflow-scroll-reveal">
-          <span className="webflow-section-kicker">Sektöre göre akış</span>
-          <h2>Her işletmenin yorum isteme anı farklı.</h2>
+          <span className="webflow-section-kicker">{isEn ? 'Flow by sector' : 'Sektöre göre akış'}</span>
+          <h2>{isEn ? 'Every business has a different moment to ask for reviews.' : 'Her işletmenin yorum isteme anı farklı.'}</h2>
           <p>
-            Kategoriler, şablonlar ve gönderim geçmişiyle farklı sektörlerin yorum toplama ritmini
-            aynı panelden yönet.
+            {isEn
+              ? 'Manage the review collection rhythm of different sectors from the same panel with categories, templates, and send history.'
+              : 'Kategoriler, şablonlar ve gönderim geçmişiyle farklı sektörlerin yorum toplama ritmini aynı panelden yönet.'}
           </p>
         </div>
 
         <div className="webflow-industry-shell webflow-scroll-reveal">
-          <div className="webflow-industry-tabs" role="tablist" aria-label="Sektör senaryoları">
-            {industryTabs.map((industry) => {
+          <div className="webflow-industry-tabs" role="tablist" aria-label={isEn ? 'Sector scenarios' : 'Sektör senaryoları'}>
+            {tabs.map((industry) => {
               const isActive = industry.key === activeIndustry
 
               return (
@@ -763,7 +1180,7 @@ function IndustryTabsSection() {
               <img src={active.image} alt={active.imageAlt} loading="lazy" />
               <div className="webflow-floating-score" aria-hidden="true">
                 <Star className="h-4 w-4" />
-                <span>Yeni yorum fırsatı</span>
+                <span>{isEn ? 'New review opportunity' : 'Yeni yorum fırsatı'}</span>
               </div>
             </div>
           </div>
@@ -773,31 +1190,30 @@ function IndustryTabsSection() {
   )
 }
 
-function FeatureGridSection() {
+function FeatureGridSection({ language }: { language: LanguageOption }) {
+  const isEn = language === 'English'
+  const features = isEn ? featureCardsEn : featureCards
+
   return (
     <section data-header-tone="dark" className="webflow-features-section">
       <div className="webflow-section-inner">
         <div className="webflow-feature-heading webflow-scroll-reveal">
-          <span className="webflow-section-kicker">Panel özellikleri</span>
-          <h2>Yorum toplama operasyonu için gerekli parçalar.</h2>
-          <WebflowArrowLink href="/business" tone="light">Tüm akışı gör</WebflowArrowLink>
+          <span className="webflow-section-kicker">{isEn ? 'Panel features' : 'Panel özellikleri'}</span>
+          <h2>{isEn ? 'Essential pieces for the review collection operation.' : 'Yorum toplama operasyonu için gerekli parçalar.'}</h2>
+          <WebflowArrowLink tone="light">{isEn ? 'See full flow' : 'Tüm akışı gör'}</WebflowArrowLink>
         </div>
 
         <div className="webflow-feature-grid">
-          {featureCards.map((feature, index) => (
-            <a
+          {features.map((feature, index) => (
+            <article
               key={feature.title}
-              href={feature.href}
               className="webflow-feature-card webflow-scroll-reveal"
               style={{ animationDelay: `${index * 55}ms` }}
             >
               <span className="webflow-feature-icon">{feature.icon}</span>
               <h3>{feature.title}</h3>
               <p>{feature.description}</p>
-              <span className="webflow-card-arrow" aria-hidden="true">
-                <ArrowUpRight className="h-5 w-5" />
-              </span>
-            </a>
+            </article>
           ))}
         </div>
       </div>
@@ -805,21 +1221,24 @@ function FeatureGridSection() {
   )
 }
 
-function FinalCtaFooter() {
+function FinalCtaFooter({ demoCTA, goToPanelLabel, language }: { demoCTA: string; goToPanelLabel: string; language: LanguageOption }) {
+  const isEn = language === 'English'
+
   return (
-    <section data-header-tone="light" className="webflow-final-section">
+    <section id="contact" data-header-tone="light" className="webflow-final-section">
       <div className="webflow-section-inner">
         <div className="webflow-final-card webflow-scroll-reveal">
           <div>
-            <span className="webflow-section-kicker">YorumUp ile başla</span>
-            <h2>Daha fazla yorumu düzenli toplamaya başla.</h2>
+            <span className="webflow-section-kicker">{isEn ? 'Start with YorumUp' : 'YorumUp ile başla'}</span>
+            <h2>{isEn ? 'Start systematically collecting more reviews.' : 'Daha fazla yorumu düzenli toplamaya başla.'}</h2>
             <p>
-              Müşteri listesini kur, WhatsApp bağlantını yap ve yorum linklerini tek panelden takip
-              edilebilir şekilde gönder.
+              {isEn
+                ? 'Build your customer list, connect WhatsApp, and send review links trackably from a single panel.'
+                : 'Müşteri listesini kur, WhatsApp bağlantını yap ve yorum linklerini tek panelden takip edilebilir şekilde gönder.'}
             </p>
           </div>
           <div className="webflow-final-contact">
-            <div className="webflow-final-socials" aria-label="YorumUp iletişim bağlantıları">
+            <div className="webflow-final-socials" aria-label={isEn ? 'YorumUp contact links' : 'YorumUp iletişim bağlantıları'}>
               <a href={instagramContactHref} aria-label="YorumUp Instagram">
                 <Instagram className="h-4 w-4" />
                 <span>yorumup.comm</span>
@@ -839,10 +1258,10 @@ function FinalCtaFooter() {
             </div>
             <div className="webflow-final-actions">
               <PillButton href={mailContactHref} tone="light" icon={<ArrowUpRight className="h-5 w-5" />}>
-                Demo al
+                {demoCTA}
               </PillButton>
-              <PillButton href="/business" tone="dark" icon={<Building2 className="h-5 w-5" />}>
-                Panele git
+              <PillButton tone="dark" icon={<Building2 className="h-5 w-5" />}>
+                {goToPanelLabel}
               </PillButton>
             </div>
           </div>
@@ -854,25 +1273,26 @@ function FinalCtaFooter() {
             YorumUp
           </a>
           <nav>
-            <a href="#about">Hakkımızda</a>
-            <a href="#sectors">Sektörler</a>
-            <a href={whatsappContactHref}>İletişim</a>
+            <a href="#about">{isEn ? 'About' : 'Hakkımızda'}</a>
+            <a href="#sectors">{isEn ? 'Sectors' : 'Sektörler'}</a>
+            <a href={whatsappContactHref}>{isEn ? 'Contact' : 'İletişim'}</a>
           </nav>
-          <span>WhatsApp ile yorum toplama paneli</span>
+          <span>{isEn ? 'Review collection panel via WhatsApp' : 'WhatsApp ile yorum toplama paneli'}</span>
         </footer>
       </div>
     </section>
   )
 }
 
-function LandingContinuation() {
+function LandingContinuation({ demoCTA, goToPanelLabel, language }: { demoCTA: string; goToPanelLabel: string; language: LanguageOption }) {
   return (
     <>
-      <PlatformCardsSection />
-      <ProofMetricsSection />
-      <IndustryTabsSection />
-      <FeatureGridSection />
-      <FinalCtaFooter />
+      <PlatformCardsSection language={language} />
+      <LogoMarqueeSection language={language} />
+      <ProofMetricsSection language={language} />
+      <IndustryTabsSection language={language} />
+      <FeatureGridSection language={language} />
+      <FinalCtaFooter demoCTA={demoCTA} goToPanelLabel={goToPanelLabel} language={language} />
     </>
   )
 }
@@ -895,11 +1315,35 @@ function SiteEntryLoader({ isLeaving }: { isLeaving: boolean }) {
 
 export default function Home() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const [isHeaderOnLight, setIsHeaderOnLight] = useState(false)
+  const [isLanguageSelectorVisible, setIsLanguageSelectorVisible] = useState(true)
+  const [selectedLanguage, setSelectedLanguage] = useState<LanguageOption>('Türkçe')
   const [isIntroVisible, setIsIntroVisible] = useState(true)
   const [isIntroLeaving, setIsIntroLeaving] = useState(false)
   const heroRef = useRef<HTMLElement | null>(null)
-  const headerOnLightRef = useRef(false)
+  const [languageShellElement, setLanguageShellElement] = useState<HTMLElement | null>(null)
+  const [languageSelectorHeight, setLanguageSelectorHeight] = useState(0)
+  const [languageScrollProgress, setLanguageScrollProgress] = useState(0)
+
+  // Locale-aware datasets and small labels (Turkish is default)
+  const menuLinks = selectedLanguage === 'English' ? menuLinksEn : menuLinksTr
+  const localeHeroChoices = selectedLanguage === 'English' ? heroChoicesEn : heroChoices
+  const localeProcessSteps = selectedLanguage === 'English' ? processStepsEn : processSteps
+  const localePlatformCards = selectedLanguage === 'English' ? platformCardsEn : platformCards
+  const localeProofMetrics = selectedLanguage === 'English' ? proofMetricsEn : proofMetrics
+  const localeIndustryTabs = selectedLanguage === 'English' ? industryTabsEn : industryTabs
+  const localeFeatureCards = selectedLanguage === 'English' ? featureCardsEn : featureCards
+
+  const contactLabel = selectedLanguage === 'English' ? 'CONTACT' : 'İLETİŞİM'
+  const menuLabel = selectedLanguage === 'English' ? 'MENU' : 'MENÜ'
+  const closeLabel = selectedLanguage === 'English' ? 'CLOSE' : 'KAPAT'
+  const heroTitle = selectedLanguage === 'English' ? 'More reviews, less hassle' : 'Daha fazla yorum daha az uğraş'
+  const heroSubtitle = selectedLanguage === 'English'
+    ? 'YorumUp helps you organize, speed up and track review invites to grow your online reputation.'
+    : 'YorumUp, yorum davetlerini düzenli, hızlı ve takip edilebilir hale getirerek işletmenizin online itibarını büyütür.'
+  const heroBenefitsHeading = selectedLanguage === 'English' ? '3 benefits of YorumUp' : 'YorumUp’ın 3 faydası'
+  const demoCTA = selectedLanguage === 'English' ? 'Get demo' : 'Demo al'
+  const fasterText = selectedLanguage === 'English' ? 'Collect reviews faster' : 'Daha hızlı yorum toplayın'
+  const goToPanelLabel = selectedLanguage === 'English' ? 'Go to panel' : 'Panele git'
 
   useEffect(() => {
     const leaveTimer = window.setTimeout(() => setIsIntroLeaving(true), 1750)
@@ -937,30 +1381,60 @@ export default function Home() {
   }, [])
 
   useEffect(() => {
-    const updateHeaderTone = () => {
-      const headerCheckY = 96
-      const tonedSection = Array.from(document.querySelectorAll<HTMLElement>('[data-header-tone]')).find((section) => {
-        const rect = section.getBoundingClientRect()
-
-        return rect.top <= headerCheckY && rect.bottom >= headerCheckY
-      })
-      const nextHeaderOnLight = tonedSection?.dataset.headerTone === 'light'
-
-      if (nextHeaderOnLight !== headerOnLightRef.current) {
-        headerOnLightRef.current = nextHeaderOnLight
-        setIsHeaderOnLight(nextHeaderOnLight)
-      }
+    if (!isLanguageSelectorVisible) {
+      setLanguageSelectorHeight(0)
+      setLanguageScrollProgress(1)
+      return
     }
 
-    updateHeaderTone()
-    window.addEventListener('scroll', updateHeaderTone, { passive: true })
-    window.addEventListener('resize', updateHeaderTone)
+    const shell = languageShellElement
+
+    if (!shell) {
+      return
+    }
+
+    const updateHeight = () => {
+      setLanguageSelectorHeight(shell.getBoundingClientRect().height)
+    }
+    const resizeObserver = new ResizeObserver(updateHeight)
+
+    updateHeight()
+    resizeObserver.observe(shell)
+    window.addEventListener('resize', updateHeight)
 
     return () => {
-      window.removeEventListener('scroll', updateHeaderTone)
-      window.removeEventListener('resize', updateHeaderTone)
+      resizeObserver.disconnect()
+      window.removeEventListener('resize', updateHeight)
     }
-  }, [])
+  }, [isLanguageSelectorVisible, languageShellElement])
+
+  useEffect(() => {
+    if (!isLanguageSelectorVisible) {
+      return
+    }
+
+    let frame = 0
+
+    const updateScrollProgress = () => {
+      window.cancelAnimationFrame(frame)
+      frame = window.requestAnimationFrame(() => {
+        const height = languageShellElement?.getBoundingClientRect().height || languageSelectorHeight || 1
+        const progress = Math.min(Math.max(window.scrollY / height, 0), 1)
+
+        setLanguageScrollProgress(progress)
+      })
+    }
+
+    updateScrollProgress()
+    window.addEventListener('scroll', updateScrollProgress, { passive: true })
+    window.addEventListener('resize', updateScrollProgress)
+
+    return () => {
+      window.cancelAnimationFrame(frame)
+      window.removeEventListener('scroll', updateScrollProgress)
+      window.removeEventListener('resize', updateScrollProgress)
+    }
+  }, [isLanguageSelectorVisible, languageSelectorHeight, languageShellElement])
 
   const handleHeroPointerMove = (event: PointerEvent<HTMLElement>) => {
     const hero = heroRef.current
@@ -977,28 +1451,48 @@ export default function Home() {
     hero.style.setProperty('--hero-y', `${y.toFixed(2)}%`)
   }
 
+  const languageSelectorOffset = isLanguageSelectorVisible
+    ? Math.max(languageSelectorHeight * (1 - languageScrollProgress), 0)
+    : 0
+
   return (
     <main className="min-h-screen overflow-x-clip bg-[#090b0d] text-white">
       {isIntroVisible ? <SiteEntryLoader isLeaving={isIntroLeaving} /> : null}
 
-      <header className="pointer-events-none fixed inset-x-0 top-0 z-[80] px-5 py-5 sm:px-8">
+      {isLanguageSelectorVisible ? (
+        <LanguageSelectorBar
+          selectedLanguage={selectedLanguage}
+          onLanguageChange={setSelectedLanguage}
+          onConfirm={() => setIsLanguageSelectorVisible(false)}
+          scrollProgress={languageScrollProgress}
+          onShellElementChange={setLanguageShellElement}
+          texts={{
+            introCopy: selectedLanguage === 'English' ? 'Choose your language' : 'Dil seçin',
+            chooseLabel: selectedLanguage === 'English' ? 'Choose your language' : 'Dil seçin',
+            confirmLabel: selectedLanguage === 'English' ? 'Confirm' : 'Onayla',
+            optionSubLabelDefault: selectedLanguage === 'English' ? 'Default language' : 'Varsayılan dil',
+            optionSubLabelAvailable: selectedLanguage === 'English' ? 'Available language' : 'Mevcut dil',
+          }}
+        />
+      ) : null}
+
+      <header
+        className="pointer-events-none fixed inset-x-0 z-[80] px-5 py-5 transition-[top] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] sm:px-8"
+        style={{ top: `${languageSelectorOffset}px` }}
+      >
         <nav className="mx-auto flex max-w-[1480px] items-center justify-between">
           <a
             href="/"
-            className={`group pointer-events-auto flex items-center gap-3 transition-colors duration-300 ${
-              isHeaderOnLight ? 'text-[#090b0d]' : 'text-white'
-            }`}
-            aria-label="YorumUp home"
+            className="group pointer-events-auto flex items-center"
+            aria-label="YorumUp.com ana sayfa"
           >
-            <span
-              className={`flex h-10 w-10 items-center justify-center rounded-md transition duration-500 ease-[cubic-bezier(0.76,0,0.24,1)] group-hover:rotate-3 ${
-                isHeaderOnLight ? 'bg-[#090b0d] text-white' : 'bg-white text-[#090b0d]'
-              }`}
-            >
-              <MessageSquare className="h-5 w-5" />
-            </span>
-            <span className="text-lg font-semibold tracking-[-0.01em]">
-              <RollingText>YorumUp</RollingText>
+            <span className="flex h-8 w-[min(54vw,13rem)] items-center transition duration-500 ease-[cubic-bezier(0.76,0,0.24,1)] group-hover:-translate-y-0.5 sm:h-9">
+              <img
+                src="/logo.png"
+                alt=""
+                className="h-full w-full object-contain drop-shadow-[0_3px_10px_rgba(0,0,0,0.38)]"
+                draggable={false}
+              />
             </span>
           </a>
 
@@ -1009,11 +1503,11 @@ export default function Home() {
           >
             <span className="hidden sm:inline-flex">
               <PillButton href={whatsappContactHref} tone="dark">
-                İLETİŞİM
+                {contactLabel}
               </PillButton>
             </span>
             <PillButton onClick={() => setIsMenuOpen(true)} tone="light" icon={<Menu className="h-5 w-5" />}>
-              MENÜ
+              {menuLabel}
             </PillButton>
           </div>
         </nav>
@@ -1021,12 +1515,13 @@ export default function Home() {
 
       <div
         aria-hidden={!isMenuOpen}
-        className={`fixed right-4 top-20 z-[70] max-h-[calc(100dvh-6rem)] w-[min(calc(100vw-2rem),360px)] overflow-y-auto overscroll-contain rounded-[16px] transition-[clip-path,opacity,transform] duration-[780ms] ease-[cubic-bezier(0.76,0,0.24,1)] [scrollbar-width:none] sm:right-8 sm:top-6 sm:max-h-[calc(100dvh-3rem)] ${
+        className={`language-aware-menu fixed right-4 z-[70] max-h-[calc(100dvh-6rem)] w-[min(calc(100vw-2rem),360px)] overflow-y-auto overscroll-contain rounded-[16px] transition-[clip-path,opacity,transform,top] duration-[780ms] ease-[cubic-bezier(0.76,0,0.24,1)] [scrollbar-width:none] sm:right-8 sm:max-h-[calc(100dvh-3rem)] ${
           isMenuOpen ? 'pointer-events-auto translate-y-0 opacity-100' : 'pointer-events-none -translate-y-2 opacity-0'
         }`}
         style={{
           clipPath: isMenuOpen ? 'circle(145% at calc(100% - 40px) 28px)' : 'circle(0% at calc(100% - 40px) 28px)',
-        }}
+          '--language-selector-offset': `${languageSelectorOffset}px`,
+        } as CSSProperties}
       >
         <div className="grid gap-2 sm:gap-2.5">
           <div
@@ -1044,7 +1539,7 @@ export default function Home() {
               icon={<span className="h-1.5 w-1.5 rounded-full bg-white" />}
               className="w-full min-w-0 !h-11 px-3 !text-sm sm:!h-12 sm:px-4 sm:!text-sm"
             >
-              İLETİŞİM
+              {contactLabel}
             </PillButton>
             <PillButton
               onClick={() => setIsMenuOpen(false)}
@@ -1052,7 +1547,7 @@ export default function Home() {
               icon={<MoreVertical className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={3} />}
               className="w-full !h-11 px-3 !text-sm sm:!h-12 sm:px-4 sm:!text-sm"
             >
-              KAPAT
+              {closeLabel}
             </PillButton>
           </div>
 
@@ -1080,9 +1575,7 @@ export default function Home() {
             </nav>
           </section>
 
-          <a
-            href="/business"
-            onClick={() => setIsMenuOpen(false)}
+          <div
             className={`group flex h-[72px] items-center justify-between rounded-[9px] bg-black px-6 text-white shadow-2xl transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-[#111] sm:h-[82px] sm:px-7 ${
               isMenuOpen ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
             }`}
@@ -1095,14 +1588,14 @@ export default function Home() {
               </span>
             </div>
             <ArrowUpRight className="h-5 w-5 transition duration-300 group-hover:translate-x-1 group-hover:-translate-y-1 sm:h-6 sm:w-6" />
-          </a>
+          </div>
         </div>
       </div>
 
       <section
         ref={heroRef}
         id="hero"
-        className="webflow-hero relative h-[100svh] overflow-hidden border border-white/10 bg-[#050608] text-white"
+        className="webflow-hero relative min-h-[100svh] overflow-hidden border border-white/10 bg-[#050608] text-white lg:h-[100svh]"
         aria-label="YorumUp hero"
         onPointerMove={handleHeroPointerMove}
       >
@@ -1110,45 +1603,44 @@ export default function Home() {
         <div className="webflow-hero-fluted" />
         <div className="webflow-hero-grid" />
 
-        <div className="relative z-10 mx-auto flex h-full min-h-0 w-[90%] max-w-[112rem] flex-col pb-6 pt-24 sm:pb-8 sm:pt-28 lg:pb-12 lg:pt-28 xl:pt-32">
+        <div className="relative z-10 mx-auto flex min-h-[100svh] w-[90%] max-w-[112rem] flex-col pb-6 pt-24 sm:pb-8 sm:pt-28 lg:h-full lg:min-h-0 lg:pb-12 lg:pt-28 xl:pt-32">
           <div className="mx-auto max-w-[65rem] text-center">
             <h1 className="webflow-reveal-large webflow-hero-title text-white">
-              Daha fazla yorum daha az uğraş
+              {heroTitle}
             </h1>
             <p className="webflow-reveal-small mx-auto mt-6 max-w-[50rem] text-[1.1rem] font-semibold leading-[1.5] text-white/78 lg:text-xl">
-              YorumUp, yorum davetlerini düzenli, hızlı ve takip edilebilir hale getirerek
-              işletmenizin online itibarını büyütür.
+              {heroSubtitle}
             </p>
           </div>
 
           <div className="mt-auto">
             <div className="mb-5 flex flex-col gap-3 sm:mb-6 lg:mb-7 lg:flex-row lg:items-center lg:justify-between">
               <h2 className="webflow-reveal-small text-base font-semibold leading-[1.2] text-white sm:text-lg">
-                YorumUp’ın 3 faydası
+                {heroBenefitsHeading}
               </h2>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <span className="webflow-reveal-small text-base font-semibold leading-[1.2] text-white/88 sm:text-lg">
-                  Daha hızlı yorum toplayın
+                  {fasterText}
                 </span>
                 <a
                   href={mailContactHref}
                   className="webflow-reveal-small inline-flex min-h-10 items-center justify-center rounded-[4px] bg-[#146ef5] px-4 py-2 text-base font-semibold leading-[1.2] text-white transition duration-300 hover:bg-[#0055d4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
                 >
-                  Demo al
+                  {demoCTA}
                 </a>
               </div>
             </div>
 
             <div className="grid grid-flow-col auto-cols-[minmax(17.5rem,1fr)] gap-4 overflow-x-auto pb-2 [scrollbar-width:none] lg:grid-flow-row lg:grid-cols-3 lg:overflow-visible lg:pb-0 xl:gap-5">
-              {heroChoices.map((choice, index) => (
-                <HeroChoiceCard key={choice.title} choice={choice} index={index} />
+              {localeHeroChoices.map((choice, index) => (
+                <HeroChoiceCard key={choice.title} choice={choice} index={index} language={selectedLanguage} />
               ))}
             </div>
           </div>
         </div>
       </section>
-      <ProcessStepsSection />
-      <LandingContinuation />
+      <ProcessStepsSection language={selectedLanguage} />
+      <LandingContinuation demoCTA={demoCTA} goToPanelLabel={goToPanelLabel} language={selectedLanguage} />
     </main>
   )
 }
