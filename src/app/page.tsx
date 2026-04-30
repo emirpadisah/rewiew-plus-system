@@ -8,14 +8,17 @@ import {
   Building2,
   Car,
   CheckCircle2,
-  Coffee,
   FileText,
   HeartPulse,
   History,
+  Instagram,
   Link2,
+  Mail,
   Menu,
+  MessageCircle,
   MessageSquare,
   MoreVertical,
+  Phone,
   Send,
   ShieldCheck,
   Sparkles,
@@ -26,11 +29,16 @@ import {
   Users,
 } from 'lucide-react'
 
+const whatsappContactHref = 'https://wa.me/905071331097'
+const mailContactHref = 'mailto:yorumup@gmail.com'
+const phoneContactHref = 'tel:+905071331097'
+const instagramContactHref = 'https://www.instagram.com/yorumup'
+
 const menuLinks = [
   { label: 'ANA SAYFA', href: '/' },
   { label: 'HAKKIMIZDA', href: '#about' },
-  { label: 'PROJELER', href: '#projects' },
-  { label: 'İLETİŞİM', href: 'mailto:info@yorumup.com' },
+  { label: 'SEKTÖRLER', href: '#sectors' },
+  { label: 'İLETİŞİM', href: whatsappContactHref },
 ]
 
 type HeroPreview = 'dashboard' | 'customers' | 'messages'
@@ -99,6 +107,7 @@ const platformCards: Array<{
   href: string
   cta: string
   image: string
+  imageAlt: string
   icon: ReactNode
   stat: string
   statLabel: string
@@ -110,7 +119,8 @@ const platformCards: Array<{
     description: 'CSV aktarımı, kategoriler ve müşteri notlarıyla yorum isteyeceğin kitleyi tek yerde düzenle.',
     href: '/business/customers',
     cta: 'Listeyi oluştur',
-    image: '/landing/step-customers.png',
+    image: '/landing/customer-workflow-photo.jpg',
+    imageAlt: 'Müşteri ve iş akışı yönetimi için dizüstü bilgisayarla çalışan ekip',
     icon: <Users className="h-5 w-5" />,
     stat: '620',
     statLabel: 'müşteri tek panelde',
@@ -122,7 +132,8 @@ const platformCards: Array<{
     description: 'Şablonunu seç, hedef müşterileri işaretle ve yorum linkini doğru zamanda WhatsApp ile ilet.',
     href: '/business/send-message',
     cta: 'Davet gönder',
-    image: '/landing/step-send-message.png',
+    image: '/landing/whatsapp-message-photo.jpg',
+    imageAlt: 'Telefonda WhatsApp ve mesajlaşma uygulamaları',
     icon: <Send className="h-5 w-5" />,
     stat: '38',
     statLabel: 'bugünkü davet',
@@ -134,7 +145,8 @@ const platformCards: Array<{
     description: 'Başarılı ve başarısız gönderimleri gör, günlük akışı izle ve işletmenin yorum ritmini düzenli tut.',
     href: '/business/messages',
     cta: 'Akışı takip et',
-    image: '/landing/step-whatsapp.png',
+    image: '/landing/analytics-dashboard-photo.jpg',
+    imageAlt: 'Dizüstü bilgisayar ekranında performans ve analiz grafikleri',
     icon: <TrendingUp className="h-5 w-5" />,
     stat: '94%',
     statLabel: 'başarılı gönderim',
@@ -156,20 +168,22 @@ const industryTabs: Array<{
   title: string
   description: string
   image: string
+  imageAlt: string
   metric: string
   metricLabel: string
   benefits: string[]
 }> = [
   {
-    key: 'cafes',
-    label: 'Kafeler',
-    icon: <Coffee className="h-4 w-4" />,
-    title: 'Yoğun saatlerden sonra yorum daveti aksın',
-    description: 'Müdavim, yeni müşteri ve paket servis kategorileriyle yorum isteğini doğru kitleye gönder.',
-    image: '/landing/step-send-message.png',
+    key: 'hotels',
+    label: 'Oteller',
+    icon: <Building2 className="h-4 w-4" />,
+    title: 'Konaklama sonrası yorum daveti aksın',
+    description: 'Check-out sonrası misafirleri segmentlere ayır, memnuniyet yorumlarını doğru zamanda iste.',
+    image: '/landing/industry-hotel.jpg',
+    imageAlt: 'Modern otel resepsiyonu ve lobi alanı',
     metric: '38',
     metricLabel: 'bugünkü davet',
-    benefits: ['Servis sonrası hızlı WhatsApp daveti', 'VIP ve müdavim kategorileri', 'Günlük gönderim kontrolü'],
+    benefits: ['Check-out sonrası hızlı WhatsApp daveti', 'Oda tipi ve misafir kategorileri', 'Günlük gönderim kontrolü'],
   },
   {
     key: 'clinics',
@@ -177,7 +191,8 @@ const industryTabs: Array<{
     icon: <HeartPulse className="h-4 w-4" />,
     title: 'Memnun hasta deneyimini görünür hale getir',
     description: 'Randevu sonrası nazik mesaj şablonlarıyla güven veren yorumları daha düzenli topla.',
-    image: '/landing/step-customers.png',
+    image: '/landing/industry-clinic.jpg',
+    imageAlt: 'Temiz ve modern klinik muayene odası',
     metric: '94%',
     metricLabel: 'başarılı gönderim',
     benefits: ['Randevu sonrası kişisel davet', 'Hizmet türüne göre kategori', 'Mesaj geçmişi ve hata takibi'],
@@ -188,7 +203,8 @@ const industryTabs: Array<{
     icon: <Car className="h-4 w-4" />,
     title: 'Teslimattan sonra yorumu kaçırma',
     description: 'Bakım, onarım ve ekspertiz müşterilerini ayır; teslim sonrası tek panelden yorum linki gönder.',
-    image: '/landing/step-whatsapp.png',
+    image: '/landing/industry-auto-service.jpg',
+    imageAlt: 'Modern oto servis garajında bakıma alınan araç',
     metric: '620',
     metricLabel: 'kayıtlı müşteri',
     benefits: ['Servis türüne göre ayrım', 'Toplu gönderim öncesi seçim', 'Bağlantı durumunu anlık görme'],
@@ -199,7 +215,8 @@ const industryTabs: Array<{
     icon: <Sparkles className="h-4 w-4" />,
     title: 'Memnuniyeti sosyal kanıta dönüştür',
     description: 'İşlem sonrası müşteriye sıcak bir mesajla ulaş, yorum linkini kaybolmadan ilet.',
-    image: '/landing/step-send-message.png',
+    image: '/landing/industry-beauty-salon.jpg',
+    imageAlt: 'Modern güzellik salonu iç mekanı',
     metric: '1.248',
     metricLabel: 'demo davet',
     benefits: ['İşlem bazlı mesaj şablonları', 'Daimi müşteri listeleri', 'Hızlı takip ve tekrar gönderim'],
@@ -610,8 +627,8 @@ function PlatformCardsSection() {
           <span className="webflow-section-kicker">Yorum toplama sistemi</span>
           <h2>Her yorumu rastlantıya bırakmadan topla.</h2>
           <p>
-            Webflow’un büyük kart ritminden ilham alan bu akış, müşteri listesinden WhatsApp davetine
-            ve gönderim takibine kadar YorumUp’ın temel değerini görünür kılar.
+            YorumUp, müşterilerinizi düzenli şekilde kaydetmenizi, WhatsApp üzerinden yorum daveti
+            göndermenizi ve tüm gönderim sürecini tek panelden takip etmenizi sağlar.
           </p>
         </div>
 
@@ -637,7 +654,7 @@ function PlatformCardsSection() {
                 ))}
               </div>
               <div className="webflow-platform-visual">
-                <img src={card.image} alt="" loading="lazy" />
+                <img src={card.image} alt={card.imageAlt} loading="lazy" />
               </div>
               <div className="webflow-platform-card-bottom">
                 <span>
@@ -695,7 +712,7 @@ function IndustryTabsSection() {
   const active = industryTabs.find((industry) => industry.key === activeIndustry) ?? industryTabs[0]
 
   return (
-    <section data-header-tone="light" className="webflow-industries-section">
+    <section id="sectors" data-header-tone="light" className="webflow-industries-section">
       <div className="webflow-section-inner">
         <div className="webflow-section-heading webflow-scroll-reveal">
           <span className="webflow-section-kicker">Sektöre göre akış</span>
@@ -743,7 +760,7 @@ function IndustryTabsSection() {
             </div>
 
             <div className="webflow-industry-visual">
-              <img src={active.image} alt="" loading="lazy" />
+              <img src={active.image} alt={active.imageAlt} loading="lazy" />
               <div className="webflow-floating-score" aria-hidden="true">
                 <Star className="h-4 w-4" />
                 <span>Yeni yorum fırsatı</span>
@@ -801,13 +818,33 @@ function FinalCtaFooter() {
               edilebilir şekilde gönder.
             </p>
           </div>
-          <div className="webflow-final-actions">
-            <PillButton href="mailto:info@yorumup.com" tone="light" icon={<ArrowUpRight className="h-5 w-5" />}>
-              Demo al
-            </PillButton>
-            <PillButton href="/business" tone="dark" icon={<Building2 className="h-5 w-5" />}>
-              Panele git
-            </PillButton>
+          <div className="webflow-final-contact">
+            <div className="webflow-final-socials" aria-label="YorumUp iletişim bağlantıları">
+              <a href={instagramContactHref} aria-label="YorumUp Instagram">
+                <Instagram className="h-4 w-4" />
+                <span>yorumup.comm</span>
+              </a>
+              <a href={mailContactHref} aria-label="YorumUp e-posta">
+                <Mail className="h-4 w-4" />
+                <span>yorumupp@gmail.com</span>
+              </a>
+              <a href={phoneContactHref} aria-label="YorumUp telefon numarası">
+                <Phone className="h-4 w-4" />
+                <span>+90 507 133 10 97</span>
+              </a>
+              <a href={whatsappContactHref} aria-label="YorumUp WhatsApp">
+                <MessageCircle className="h-4 w-4" />
+                <span>WhatsApp</span>
+              </a>
+            </div>
+            <div className="webflow-final-actions">
+              <PillButton href={mailContactHref} tone="light" icon={<ArrowUpRight className="h-5 w-5" />}>
+                Demo al
+              </PillButton>
+              <PillButton href="/business" tone="dark" icon={<Building2 className="h-5 w-5" />}>
+                Panele git
+              </PillButton>
+            </div>
           </div>
         </div>
 
@@ -818,8 +855,8 @@ function FinalCtaFooter() {
           </a>
           <nav>
             <a href="#about">Hakkımızda</a>
-            <a href="#projects">Projeler</a>
-            <a href="mailto:info@yorumup.com">İletişim</a>
+            <a href="#sectors">Sektörler</a>
+            <a href={whatsappContactHref}>İletişim</a>
           </nav>
           <span>WhatsApp ile yorum toplama paneli</span>
         </footer>
@@ -840,11 +877,52 @@ function LandingContinuation() {
   )
 }
 
+function SiteEntryLoader({ isLeaving }: { isLeaving: boolean }) {
+  return (
+    <div
+      className={`site-entry-loader ${isLeaving ? 'is-leaving' : ''}`}
+      role="status"
+      aria-live="polite"
+      aria-label="YorumUp.com yükleniyor"
+    >
+      <div className="site-entry-loader-word" aria-hidden="true">
+        <span className="site-entry-loader-brand">yorumup</span>
+        <span className="site-entry-loader-domain">.com</span>
+      </div>
+    </div>
+  )
+}
+
 export default function Home() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isHeaderOnLight, setIsHeaderOnLight] = useState(false)
+  const [isIntroVisible, setIsIntroVisible] = useState(true)
+  const [isIntroLeaving, setIsIntroLeaving] = useState(false)
   const heroRef = useRef<HTMLElement | null>(null)
   const headerOnLightRef = useRef(false)
+
+  useEffect(() => {
+    const leaveTimer = window.setTimeout(() => setIsIntroLeaving(true), 1750)
+    const hideTimer = window.setTimeout(() => setIsIntroVisible(false), 2350)
+
+    return () => {
+      window.clearTimeout(leaveTimer)
+      window.clearTimeout(hideTimer)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!isIntroVisible) {
+      return
+    }
+
+    const originalOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    return () => {
+      document.body.style.overflow = originalOverflow
+    }
+  }, [isIntroVisible])
 
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
@@ -901,6 +979,8 @@ export default function Home() {
 
   return (
     <main className="min-h-screen overflow-x-clip bg-[#090b0d] text-white">
+      {isIntroVisible ? <SiteEntryLoader isLeaving={isIntroLeaving} /> : null}
+
       <header className="pointer-events-none fixed inset-x-0 top-0 z-[80] px-5 py-5 sm:px-8">
         <nav className="mx-auto flex max-w-[1480px] items-center justify-between">
           <a
@@ -928,7 +1008,7 @@ export default function Home() {
             }`}
           >
             <span className="hidden sm:inline-flex">
-              <PillButton href="mailto:info@yorumup.com" tone="dark">
+              <PillButton href={whatsappContactHref} tone="dark">
                 İLETİŞİM
               </PillButton>
             </span>
@@ -959,7 +1039,7 @@ export default function Home() {
             }}
           >
             <PillButton
-              href="mailto:info@yorumup.com"
+              href={whatsappContactHref}
               tone="dark"
               icon={<span className="h-1.5 w-1.5 rounded-full bg-white" />}
               className="w-full min-w-0 !h-11 px-3 !text-sm sm:!h-12 sm:px-4 sm:!text-sm"
@@ -1051,7 +1131,7 @@ export default function Home() {
                   Daha hızlı yorum toplayın
                 </span>
                 <a
-                  href="mailto:info@yorumup.com"
+                  href={mailContactHref}
                   className="webflow-reveal-small inline-flex min-h-10 items-center justify-center rounded-[4px] bg-[#146ef5] px-4 py-2 text-base font-semibold leading-[1.2] text-white transition duration-300 hover:bg-[#0055d4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
                 >
                   Demo al

@@ -1125,7 +1125,7 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
-    object-position: left top;
+    object-position: center;
     filter: saturate(1.03) contrast(1.02);
     transition: transform 640ms cubic-bezier(0.16, 1, 0.3, 1);
   }
@@ -1429,7 +1429,7 @@
     display: grid;
     grid-template-columns: minmax(0, 0.72fr) auto;
     gap: 3rem;
-    align-items: end;
+    align-items: stretch;
     border-radius: 0.5rem;
     background:
       linear-gradient(120deg, rgba(20, 110, 245, 0.96), rgba(20, 110, 245, 0.72) 44%, #03050a 100%);
@@ -1449,8 +1449,56 @@
     color: rgba(255, 255, 255, 0.72);
   }
 
+  .webflow-final-contact {
+    display: grid;
+    grid-template-rows: 1fr auto;
+    align-self: stretch;
+    gap: 2rem;
+    justify-items: end;
+  }
+
+  .webflow-final-socials {
+    display: grid;
+    align-self: center;
+    justify-self: end;
+    gap: 0.95rem;
+    justify-items: end;
+    text-align: right;
+  }
+
+  .webflow-final-socials a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.7rem;
+    color: #fff;
+    padding: 0.1rem 0;
+    font-size: clamp(1.45rem, 2.15vw, 2.55rem);
+    font-variation-settings: "wght" 700, "opsz" 100;
+    font-weight: 700;
+    letter-spacing: 0;
+    line-height: 1.02;
+    text-decoration: none;
+    transition:
+      color 220ms ease,
+      transform 220ms ease;
+  }
+
+  .webflow-final-socials svg {
+    width: 0.72em;
+    height: 0.72em;
+    flex: 0 0 auto;
+    opacity: 0.74;
+  }
+
+  .webflow-final-socials a:hover {
+    color: rgba(255, 255, 255, 0.74);
+    transform: translate3d(-0.18rem, 0, 0);
+  }
+
   .webflow-final-actions {
     display: flex;
+    align-self: end;
     flex-wrap: wrap;
     gap: 0.8rem;
     justify-content: flex-end;
@@ -1488,6 +1536,65 @@
 
   .webflow-footer nav a:hover {
     color: #03050a;
+  }
+
+  .site-entry-loader {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    background:
+      radial-gradient(circle at 50% 48%, rgba(20, 110, 245, 0.2), rgba(20, 110, 245, 0) 30rem),
+      #050608;
+    opacity: 1;
+    pointer-events: auto;
+    transition:
+      opacity 620ms cubic-bezier(0.16, 1, 0.3, 1),
+      visibility 620ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .site-entry-loader.is-leaving {
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+  }
+
+  .site-entry-loader-word {
+    display: inline-flex;
+    align-items: baseline;
+    overflow: visible;
+    font-family: "WF Visual Sans Variable", Arial, sans-serif;
+    font-size: 4rem;
+    font-variation-settings: "wght" 760, "opsz" 100;
+    font-weight: 760;
+    letter-spacing: 0;
+    line-height: 1.08;
+    padding-bottom: 0.12em;
+  }
+
+  .site-entry-loader-brand {
+    color: #146ef5;
+    opacity: 0;
+    transform: translate3d(0, 0.9rem, 0);
+    animation: site-entry-brand 640ms cubic-bezier(0.16, 1, 0.3, 1) 120ms forwards;
+  }
+
+  .site-entry-loader-domain {
+    display: inline-block;
+    max-width: 0;
+    overflow: hidden;
+    color: #fff;
+    opacity: 0;
+    transform: translate3d(-0.35rem, 0, 0);
+    animation: site-entry-domain 780ms cubic-bezier(0.16, 1, 0.3, 1) 760ms forwards;
+  }
+
+  @media (min-width: 768px) {
+    .site-entry-loader-word {
+      font-size: 7rem;
+    }
   }
 
   @keyframes webflow-rise {
@@ -1528,6 +1635,21 @@
       transform: translate3d(calc(-1 * var(--process-title-indent)), 0, 0);
     }
     to {
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  @keyframes site-entry-brand {
+    to {
+      opacity: 1;
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  @keyframes site-entry-domain {
+    to {
+      max-width: 4ch;
+      opacity: 1;
       transform: translate3d(0, 0, 0);
     }
   }
@@ -1574,6 +1696,14 @@
     }
 
     .webflow-final-actions {
+      justify-content: flex-start;
+    }
+
+    .webflow-final-contact {
+      justify-items: start;
+    }
+
+    .webflow-final-socials {
       justify-content: flex-start;
     }
 
@@ -1675,6 +1805,23 @@
       grid-template-columns: 1fr;
     }
 
+    .webflow-final-contact {
+      justify-items: stretch;
+    }
+
+    .webflow-final-socials {
+      display: grid;
+      grid-template-columns: 1fr;
+      max-width: none;
+      justify-content: stretch;
+      justify-items: center;
+      text-align: center;
+    }
+
+    .webflow-final-socials a {
+      justify-content: center;
+    }
+
     .webflow-footer,
     .webflow-footer nav {
       align-items: flex-start;
@@ -1748,7 +1895,9 @@
     .webflow-tabs-copy p,
     .webflow-scroll-reveal,
     .webflow-industry-panel,
-    .webflow-title-word {
+    .webflow-title-word,
+    .site-entry-loader-brand,
+    .site-entry-loader-domain {
       opacity: 1;
       transform: none;
       filter: none;
@@ -1757,6 +1906,10 @@
 
     .webflow-hero-fluted::before {
       animation: none;
+    }
+
+    .site-entry-loader-domain {
+      max-width: 4ch;
     }
   }
 }
