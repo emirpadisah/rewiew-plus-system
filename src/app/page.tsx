@@ -1276,6 +1276,7 @@ function FinalCtaFooter({ demoCTA, goToPanelLabel, language }: { demoCTA: string
             <a href="#about">{isEn ? 'About' : 'Hakkımızda'}</a>
             <a href="#sectors">{isEn ? 'Sectors' : 'Sektörler'}</a>
             <a href={whatsappContactHref}>{isEn ? 'Contact' : 'İletişim'}</a>
+            <a href="/cerez-politikasi">{isEn ? 'Cookie Policy' : 'Çerez Politikası'}</a>
           </nav>
           <span>{isEn ? 'Review collection panel via WhatsApp' : 'WhatsApp ile yorum toplama paneli'}</span>
         </footer>

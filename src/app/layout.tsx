@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
-import Script from "next/script"
 import { Inter } from "next/font/google"
 import "./globals.css"
+import { CookieConsent } from "@/components/cookie-consent"
 import { Toaster } from "@/components/ui/toaster"
 
 const inter = Inter({ subsets: ["latin", "latin-ext"] })
@@ -9,9 +9,6 @@ const siteUrl = "https://yorumup.com"
 const siteName = "YorumUp"
 const siteDescription =
   "YorumUp, işletmelerin WhatsApp üzerinden müşteri yorum davetleri göndermesini, müşteri listelerini yönetmesini ve gönderim performansını takip etmesini sağlayan yorum toplama panelidir."
-const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID
-const googleAdsId = process.env.NEXT_PUBLIC_GOOGLE_ADS_ID
-const googleTagId = gaMeasurementId || googleAdsId
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -130,29 +127,13 @@ export default function RootLayout({
   return (
     <html lang="tr">
       <body className={inter.className}>
-        {googleTagId ? (
-          <>
-            <Script
-              src={`https://www.googletagmanager.com/gtag/js?id=${googleTagId}`}
-              strategy="afterInteractive"
-            />
-            <Script id="google-analytics-and-ads" strategy="afterInteractive">
-              {`
-                window.dataLayer = window.dataLayer || [];
-                function gtag(){dataLayer.push(arguments);}
-                gtag('js', new Date());
-                ${gaMeasurementId ? `gtag('config', '${gaMeasurementId}');` : ""}
-                ${googleAdsId ? `gtag('config', '${googleAdsId}');` : ""}
-              `}
-            </Script>
-          </>
-        ) : null}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         />
         {children}
         <Toaster />
+        <CookieConsent />
       </body>
     </html>
   )
