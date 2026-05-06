@@ -1575,20 +1575,21 @@ export default function Home() {
             </nav>
           </section>
 
-          <div
+          <a
+            href="/auth/login"
+            onClick={() => setIsMenuOpen(false)}
             className={`group flex h-[72px] items-center justify-between rounded-[9px] bg-black px-6 text-white shadow-2xl transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-[#111] sm:h-[82px] sm:px-7 ${
               isMenuOpen ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
             }`}
             style={{ transitionDelay: isMenuOpen ? '480ms' : '0ms' }}
           >
-            <div className="flex items-center gap-4 sm:gap-5">
-              <span className="text-[2rem] font-bold leading-none tracking-[-0.06em]">ö</span>
+            <div className="flex items-center">
               <span className="text-[1.45rem] font-semibold leading-none tracking-[-0.04em] sm:text-[1.65rem] sm:tracking-[-0.05em]">
                 <RollingText>PANEL</RollingText>
               </span>
             </div>
             <ArrowUpRight className="h-5 w-5 transition duration-300 group-hover:translate-x-1 group-hover:-translate-y-1 sm:h-6 sm:w-6" />
-          </div>
+          </a>
         </div>
       </div>
 
